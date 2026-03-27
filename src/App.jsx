@@ -212,8 +212,14 @@ function RealPostCard({ post, session, onDelete }) {
         .from('profiles')
         .select('username, full_name')
         .eq('id', post.user_id)
-        .single()
-      if (data) setAuthorName(data.full_name || data.username)
+        .maybeSingle() // 👈 won't crash if no profile found
+
+      if (data) {
+        setAuthorName(data.full_name || data.username)
+      } else {
+        // fallback: use the user_id prefix
+        setAuthorName('User_' + post.user_id.slice(0, 5))
+      }
     }
     fetchAuthor()
   }, [post.user_id])
