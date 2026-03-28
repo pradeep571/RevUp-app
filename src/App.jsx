@@ -213,7 +213,7 @@ function RealPostCard({ post, session, onDelete }) {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', post.user_id)
+        .eq('user_id', post.user_id) // 👈 try 'user_id' instead of 'id'
         .maybeSingle()
       console.log('Profile data:', data)
       console.log('Profile error:', error)
