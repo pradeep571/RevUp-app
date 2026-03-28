@@ -209,14 +209,11 @@ function RealPostCard({ post, session, onDelete }) {
 
   useEffect(() => {
     async function fetchAuthor() {
-      console.log('Fetching profile for user_id:', post.user_id)
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('id', post.user_id) // 👈 change back to 'id'
+        .select('username, full_name')
+        .eq('id', post.user_id)
         .maybeSingle()
-      console.log('Profile data:', data)
-      console.log('Profile error:', error)
       if (data) {
         setAuthorName(data.full_name || data.username)
       } else {
