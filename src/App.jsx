@@ -206,18 +206,20 @@ function RealPostCard({ post, session, onDelete }) {
   const isOwner = session.user.id === post.user_id
 
   // 👇 Add this useEffect to fetch the post author's profile
+
   useEffect(() => {
     async function fetchAuthor() {
-      const { data } = await supabase
+      console.log('Fetching profile for user_id:', post.user_id)
+      const { data, error } = await supabase
         .from('profiles')
-        .select('username, full_name')
+        .select('*')
         .eq('id', post.user_id)
-        .maybeSingle() // 👈 won't crash if no profile found
-
+        .maybeSingle()
+      console.log('Profile data:', data)
+      console.log('Profile error:', error)
       if (data) {
         setAuthorName(data.full_name || data.username)
       } else {
-        // fallback: use the user_id prefix
         setAuthorName('User_' + post.user_id.slice(0, 5))
       }
     }
