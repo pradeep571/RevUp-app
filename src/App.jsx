@@ -219,7 +219,7 @@ function RealPostCard({ post, session, onDelete }) {
       } else {
         setAuthorName('User_' + post.user_id.slice(0, 5))
       }
-    }
+    } 
     fetchAuthor()
   }, [post.user_id])
 
@@ -248,7 +248,7 @@ function RealPostCard({ post, session, onDelete }) {
         <div className="post-avatar" style={{ background: 'linear-gradient(135deg,#f0c040,#e8a020)', color: '#000' }}>
           {session.user.email[0].toUpperCase()}
         </div>
-        <div>
+        <div style={{flex:1}}>
           <div className="post-name">{authorName}</div>
           <div className="post-handle">
             {post.car_tag ? `🚗 ${post.car_tag}` : ''} · {timeAgo(post.created_at)}
