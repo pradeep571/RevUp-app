@@ -1959,6 +1959,7 @@ body {
 .comment-body {
   flex: 1;
   min-width: 0;
+  text-align: left;
 }
 
 .comment-author {
@@ -1972,6 +1973,7 @@ body {
   color: var(--text);
   line-height: 1.5;
   word-break: break-word;
+  text-align: left;
 }
 
 .comment-meta {
@@ -2061,3 +2063,5 @@ body {
 .comment-submit:not(:disabled):hover {
   opacity: 0.85;
 }
+
+

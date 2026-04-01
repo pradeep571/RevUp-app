@@ -438,20 +438,44 @@ function RealPostCard({ post, session, onDelete }) {
       {/* ── Action Bar ── */}
       <div className="post-actions">
         <button className={liked ? 'act-btn liked' : 'act-btn'} onClick={handleLike}>
-          {liked ? '❤️' : '🤍'} {likeCount.toLocaleString()}
+          {liked ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#ff4d2e" stroke="#ff4d2e" strokeWidth="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          )}
+          {likeCount.toLocaleString()}
         </button>
-        <button
-          className="act-btn"
-          onClick={() => setShowComments(!showComments)}
-        >
-          💬 {commentCount > 0 ? commentCount : 'Comment'}
+
+        <button className="act-btn" onClick={() => setShowComments(!showComments)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          {commentCount > 0 ? commentCount : 'Comment'}
         </button>
-        <button className="act-btn">↗ Share</button>
-        <button
-          className={saved ? 'act-btn save-btn saved' : 'act-btn save-btn'}
-          onClick={() => setSaved(!saved)}
-        >
-          {saved ? '🔖 Saved' : '🔖 Save'}
+
+        <button className="act-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
+          Share
+        </button>
+
+        <button className={saved ? 'act-btn save-btn saved' : 'act-btn save-btn'} onClick={() => setSaved(!saved)}>
+          {saved ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+          )}
+          {saved ? 'Saved' : 'Save'}
         </button>
       </div>
 
@@ -482,12 +506,15 @@ function RealPostCard({ post, session, onDelete }) {
                   {(c.profiles?.full_name || c.profiles?.username || 'U')[0].toUpperCase()}
                 </div>
                 <div className="comment-body">
-                  <span className="comment-author">
-                    {c.profiles?.full_name || c.profiles?.username || 'User'}
-                  </span>
-                  <span className="comment-text"> {c.content}</span>
-                  <div className="comment-meta">{timeAgo(c.created_at)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className="comment-author">
+                      {c.profiles?.full_name || c.profiles?.username || 'User'}
+                    </span>
+                    <span className="comment-meta">{timeAgo(c.created_at)}</span>
+                  </div>
+                  <div className="comment-text">{c.content}</div>
                 </div>
+
                 {c.user_id === session.user.id && (
                   <button
                     className="comment-delete"
@@ -927,12 +954,9 @@ function FeedPage({ session }) {
           ))}
         </div>
 
-        {/* Real posts */}
         {realPosts.map(post => (
           <RealPostCard key={post.id} post={post} session={session} onDelete={handleDelete} />
         ))}
-
-
       </div>
 
       <aside className="right-panel">
@@ -967,7 +991,7 @@ function GaragePage() {
   const totalHP = cars.reduce((s, c) => s + (parseInt(c.hp) || 0), 0)
   const totalPosts = cars.reduce((s, c) => s + c.posts, 0)
   return (
-    <div className="feed-col" style={{ maxWidth: '640px', margin: '0 auto' }}>
+    <div className="feed-col" style={{ maxWidth: '100%', padding: 0 }}>
       <div className="feed-bar">
         <div><span className="feed-heading">My Garage</span><span className="feed-sub">{cars.length} cars</span></div>
         <button className="create-event-btn" onClick={() => setShowForm(true)}>+ Add Car</button>
