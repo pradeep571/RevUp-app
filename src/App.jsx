@@ -196,17 +196,33 @@ function AuthPage() {
 // POSTCARD
 // ─────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// RealPostCard — drop-in replacement inside App.jsx
+// Replaces the existing RealPostCard function entirely.
+// Likes and comments are now stored in Supabase.
+// ─────────────────────────────────────────────────────────────
+
 function RealPostCard({ post, session, onDelete }) {
+  // ── Like state ──────────────────────────────────────────────
   const [liked, setLiked] = useState(false)
-  const [likes, setLikes] = useState(post.likes || 0)
+  const [likeCount, setLikeCount] = useState(0)
+
+  // ── Comment state ────────────────────────────────────────────
+  const [showComments, setShowComments] = useState(false)
+  const [comments, setComments] = useState([])
+  const [commentText, setCommentText] = useState('')
+  const [commentLoading, setCommentLoading] = useState(false)
+  const [commentCount, setCommentCount] = useState(0)
+
+  // ── UI state ─────────────────────────────────────────────────
   const [saved, setSaved] = useState(false)
   const [following, setFollowing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [authorName, setAuthorName] = useState('') // 👈 add this
+  const [authorName, setAuthorName] = useState('')
+
   const isOwner = session.user.id === post.user_id
 
-  // 👇 Add this useEffect to fetch the post author's profile
-
+  // ── Fetch author name ────────────────────────────────────────
   useEffect(() => {
     async function fetchAuthor() {
       const { data } = await supabase
@@ -214,23 +230,108 @@ function RealPostCard({ post, session, onDelete }) {
         .select('username, full_name')
         .eq('id', post.user_id)
         .maybeSingle()
-      if (data) {
-        setAuthorName(data.full_name || data.username)
-      } else {
-        setAuthorName('User_' + post.user_id.slice(0, 5))
-      }
-    } 
+      setAuthorName(
+        data ? (data.full_name || data.username) : 'User_' + post.user_id.slice(0, 5)
+      )
+    }
     fetchAuthor()
   }, [post.user_id])
 
-  function handleLike() { setLiked(!liked); setLikes(liked ? likes - 1 : likes + 1) }
+  // ── Fetch like count + whether this user liked ───────────────
+  useEffect(() => {
+    async function fetchLikes() {
+      const { data } = await supabase
+        .from('likes')
+        .select('user_id')
+        .eq('post_id', post.id)
+      if (data) {
+        setLikeCount(data.length)
+        setLiked(data.some(l => l.user_id === session.user.id))
+      }
+    }
+    fetchLikes()
+  }, [post.id, session.user.id])
 
+  // ── Fetch comment count (for badge on button) ────────────────
+  useEffect(() => {
+    async function fetchCount() {
+      const { count } = await supabase
+        .from('comments')
+        .select('id', { count: 'exact', head: true })
+        .eq('post_id', post.id)
+      setCommentCount(count || 0)
+    }
+    fetchCount()
+  }, [post.id])
+
+  // ── Fetch full comments when section is opened ───────────────
+  useEffect(() => {
+    if (showComments) fetchComments()
+  }, [showComments])
+
+  async function fetchComments() {
+    const { data } = await supabase
+      .from('comments')
+      .select('id, content, created_at, user_id, profiles(full_name, username)')
+      .eq('post_id', post.id)
+      .order('created_at', { ascending: true })
+    if (data) {
+      setComments(data)
+      setCommentCount(data.length)
+    }
+  }
+
+  // ── Toggle like ──────────────────────────────────────────────
+  async function handleLike() {
+    if (liked) {
+      setLiked(false)
+      setLikeCount(c => c - 1)
+      await supabase
+        .from('likes')
+        .delete()
+        .eq('post_id', post.id)
+        .eq('user_id', session.user.id)
+    } else {
+      setLiked(true)
+      setLikeCount(c => c + 1)
+      await supabase.from('likes').insert({
+        post_id: post.id,
+        user_id: session.user.id,
+      })
+    }
+  }
+
+  // ── Post comment ─────────────────────────────────────────────
+  async function handleComment() {
+    if (!commentText.trim()) return
+    setCommentLoading(true)
+    const { error } = await supabase.from('comments').insert({
+      post_id: post.id,
+      user_id: session.user.id,
+      content: commentText.trim(),
+    })
+    if (!error) {
+      setCommentText('')
+      fetchComments()
+    }
+    setCommentLoading(false)
+  }
+
+  // ── Delete comment ───────────────────────────────────────────
+  async function handleDeleteComment(commentId) {
+    await supabase.from('comments').delete().eq('id', commentId)
+    setComments(prev => prev.filter(c => c.id !== commentId))
+    setCommentCount(n => n - 1)
+  }
+
+  // ── Delete post ──────────────────────────────────────────────
   async function handleDelete() {
     if (!window.confirm('Delete this post?')) return
     await supabase.from('posts').delete().eq('id', post.id)
     onDelete(post.id)
   }
 
+  // ── Time helper ──────────────────────────────────────────────
   const timeAgo = (ts) => {
     const diff = Math.floor((Date.now() - new Date(ts)) / 1000)
     if (diff < 60) return `${diff}s ago`
@@ -243,32 +344,42 @@ function RealPostCard({ post, session, onDelete }) {
 
   return (
     <article className="post">
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div className="post-header">
         <div className="post-avatar" style={{ background: 'linear-gradient(135deg,#f0c040,#e8a020)', color: '#000' }}>
           {session.user.email[0].toUpperCase()}
         </div>
-        <div style={{flex:1}}>
+        <div style={{ flex: 1 }}>
           <div className="post-name">{authorName}</div>
           <div className="post-handle">
             {post.car_tag ? `🚗 ${post.car_tag}` : ''} · {timeAgo(post.created_at)}
           </div>
         </div>
+
         {!isOwner && (
-          <button className={following ? 'follow-pill following' : 'follow-pill'} onClick={() => setFollowing(!following)}>
+          <button
+            className={following ? 'follow-pill following' : 'follow-pill'}
+            onClick={() => setFollowing(!following)}
+          >
             {following ? 'Following ✓' : '+ Follow'}
           </button>
         )}
+
         {isOwner && (
           <div style={{ position: 'relative', marginLeft: 'auto' }}>
-            <button onClick={() => setMenuOpen(!menuOpen)}
-              style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '20px', padding: '4px 8px', borderRadius: '8px', lineHeight: 1 }}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '20px', padding: '4px 8px', borderRadius: '8px', lineHeight: 1 }}
+            >
               ···
             </button>
             {menuOpen && (
               <div style={{ position: 'absolute', right: 0, top: '100%', background: '#18181d', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', minWidth: '140px', zIndex: 50, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
-                <button onClick={handleDelete}
-                  style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', color: '#ff4d2e', cursor: 'pointer', fontSize: '13px', textAlign: 'left', fontFamily: 'Inter,sans-serif' }}>
+                <button
+                  onClick={handleDelete}
+                  style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', color: '#ff4d2e', cursor: 'pointer', fontSize: '13px', textAlign: 'left', fontFamily: 'Inter,sans-serif' }}
+                >
                   🗑️ Delete post
                 </button>
               </div>
@@ -277,7 +388,7 @@ function RealPostCard({ post, session, onDelete }) {
         )}
       </div>
 
-      {/* Image */}
+      {/* ── Image ── */}
       <div className="post-img" style={{ padding: 0, overflow: 'hidden' }}>
         <img src={post.image_url} alt="post" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         <div className="post-img-overlay">
@@ -289,7 +400,7 @@ function RealPostCard({ post, session, onDelete }) {
         </div>
       </div>
 
-      {/* Spec Strip */}
+      {/* ── Spec Strip ── */}
       {hasSpecs && (
         <div className="spec-strip">
           {[
@@ -306,21 +417,29 @@ function RealPostCard({ post, session, onDelete }) {
         </div>
       )}
 
-      {/* Actions */}
+      {/* ── Action Bar ── */}
       <div className="post-actions">
         <button className={liked ? 'act-btn liked' : 'act-btn'} onClick={handleLike}>
-          {liked ? '❤️' : '🤍'} {likes.toLocaleString()}
+          {liked ? '❤️' : '🤍'} {likeCount.toLocaleString()}
         </button>
-        <button className="act-btn">💬 Comment</button>
+        <button
+          className="act-btn"
+          onClick={() => setShowComments(!showComments)}
+        >
+          💬 {commentCount > 0 ? commentCount : 'Comment'}
+        </button>
         <button className="act-btn">↗ Share</button>
-        <button className={saved ? 'act-btn save-btn saved' : 'act-btn save-btn'} onClick={() => setSaved(!saved)}>
+        <button
+          className={saved ? 'act-btn save-btn saved' : 'act-btn save-btn'}
+          onClick={() => setSaved(!saved)}
+        >
           {saved ? '🔖 Saved' : '🔖 Save'}
         </button>
       </div>
 
-      {/* Body */}
+      {/* ── Caption ── */}
       <div className="post-body">
-        <div className="post-likes">{likes.toLocaleString()} revheads liked this</div>
+        <div className="post-likes">{likeCount.toLocaleString()} revheads liked this</div>
         <p className="post-caption">
           <strong>{authorName}</strong>{' '}
           {post.caption && post.caption.split(' ').map((word, i) =>
@@ -330,6 +449,65 @@ function RealPostCard({ post, session, onDelete }) {
           )}
         </p>
       </div>
+
+      {/* ── Comments Section ── */}
+      {showComments && (
+        <div className="comments-section">
+
+          {/* Existing comments */}
+          {comments.length === 0 ? (
+            <div className="comments-empty">No comments yet. Be first! 🚗</div>
+          ) : (
+            comments.map(c => (
+              <div key={c.id} className="comment-item">
+                <div className="comment-avatar">
+                  {(c.profiles?.full_name || c.profiles?.username || 'U')[0].toUpperCase()}
+                </div>
+                <div className="comment-body">
+                  <span className="comment-author">
+                    {c.profiles?.full_name || c.profiles?.username || 'User'}
+                  </span>
+                  <span className="comment-text"> {c.content}</span>
+                  <div className="comment-meta">{timeAgo(c.created_at)}</div>
+                </div>
+                {c.user_id === session.user.id && (
+                  <button
+                    className="comment-delete"
+                    onClick={() => handleDeleteComment(c.id)}
+                    title="Delete comment"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+
+          {/* Input row */}
+          <div className="comment-input-row">
+            <div className="comment-input-avatar">
+              {session.user.email[0].toUpperCase()}
+            </div>
+            <input
+              className="comment-input"
+              placeholder="Add a comment..."
+              value={commentText}
+              onChange={e => setCommentText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleComment()}
+              maxLength={500}
+            />
+            <button
+              className="comment-submit"
+              onClick={handleComment}
+              disabled={commentLoading || !commentText.trim()}
+            >
+              {commentLoading ? '...' : 'Post'}
+            </button>
+          </div>
+
+        </div>
+      )}
+
     </article>
   )
 }
