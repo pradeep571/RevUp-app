@@ -270,15 +270,33 @@ function RealPostCard({ post, session, onDelete }) {
   }, [showComments])
 
   async function fetchComments() {
-    const { data } = await supabase
+    // Step 1: fetch comments without any join
+    const { data: commentData } = await supabase
       .from('comments')
-      .select('id, content, created_at, user_id, profiles(full_name, username)')
+      .select('id, content, created_at, user_id')
       .eq('post_id', post.id)
       .order('created_at', { ascending: true })
-    if (data) {
-      setComments(data)
-      setCommentCount(data.length)
-    }
+
+    if (!commentData) return
+
+    // Step 2: fetch profiles for those user_ids separately
+    const userIds = [...new Set(commentData.map(c => c.user_id))]
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id, full_name, username')
+      .in('id', userIds)
+
+    // Step 3: merge profiles into comments in JS
+    const profileMap = Object.fromEntries(
+      (profileData || []).map(p => [p.id, p])
+    )
+    const merged = commentData.map(c => ({
+      ...c,
+      profiles: profileMap[c.user_id] || null,
+    }))
+
+    setComments(merged)
+    setCommentCount(merged.length)
   }
 
   // ── Toggle like ──────────────────────────────────────────────
