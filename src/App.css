@@ -30,9 +30,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  height: 56px;
-  background: rgba(8, 8, 10, 0.95);
+  padding: 0 28px;
+  height: 60px;
+  background: rgba(8, 8, 10, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -52,7 +54,7 @@ body {
 
 .nav-links {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   overflow-x: auto;
   flex-shrink: 1;
 }
@@ -65,12 +67,13 @@ body {
   background: none;
   border: none;
   color: var(--muted);
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
   text-transform: capitalize;
+  text-decoration: none;
   transition: all .2s;
 }
 
@@ -103,6 +106,7 @@ body {
   display: flex;
   max-width: 1080px;
   margin: 0 auto;
+  gap: 0;
 }
 
 .feed-col {
@@ -114,8 +118,8 @@ body {
 }
 
 .right-panel {
-  width: 260px;
-  padding: 20px 16px;
+  width: 280px;
+  padding: 24px 20px;
   flex-shrink: 0;
 }
 
@@ -135,7 +139,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 10px;
+  padding: 16px 18px 12px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -154,8 +158,8 @@ body {
 /* STORIES */
 .stories {
   display: flex;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
 }
@@ -216,7 +220,7 @@ body {
 .chips {
   display: flex;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
 }
@@ -254,8 +258,8 @@ body {
 .post-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px 8px;
+  gap: 12px;
+  padding: 14px 18px 10px;
 }
 
 .post-avatar {
@@ -275,11 +279,13 @@ body {
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
+  margin-bottom: 3px;
 }
 
 .post-handle {
   font-size: 11px;
   color: var(--muted);
+  line-height: 1.4;
 }
 
 .follow-pill {
@@ -383,8 +389,8 @@ body {
 .post-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 8px 12px 4px;
+  gap: 4px;
+  padding: 10px 14px 6px;
 }
 
 .act-btn {
@@ -421,18 +427,19 @@ body {
 
 /* POST BODY */
 .post-body {
-  padding: 6px 16px 14px;
+  padding: 12px 18px 18px;
 }
 
 .post-likes {
   font-size: 13px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .post-caption {
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
 }
 
 .post-caption .hashtag {
@@ -477,8 +484,8 @@ body {
 .sug-user {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 0;
+  gap: 12px;
+  padding: 10px 0;
 }
 
 .sug-av {
@@ -1971,15 +1978,16 @@ body {
 .comment-text {
   font-size: 13px;
   color: var(--text);
-  line-height: 1.5;
+  line-height: 1.6;
   word-break: break-word;
   text-align: left;
+  margin-top: 4px;
 }
 
 .comment-meta {
   font-size: 11px;
   color: var(--muted);
-  margin-top: 3px;
+  margin-top: 5px;
 }
 
 .comment-delete {
@@ -2064,4 +2072,176 @@ body {
   opacity: 0.85;
 }
 
+/* ============================================================
+   MOBILE RESPONSIVE IMPROVEMENTS
+   ============================================================ */
 
+/* ── Mobile Bottom Navigation ── */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 16px;
+    height: 54px;
+  }
+
+  .navbar .nav-links {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(8, 8, 10, 0.97);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    gap: 0;
+    justify-content: space-around;
+    z-index: 200;
+  }
+
+  .navbar .nav-btn {
+    font-size: 11px;
+    padding: 10px 8px;
+    min-width: 44px;
+    text-align: center;
+    border-radius: 12px;
+  }
+
+  /* Add bottom padding so content isn't hidden behind bottom nav */
+  .feed-col,
+  .app-layout {
+    padding-bottom: 72px;
+  }
+
+  .create-post-btn {
+    bottom: 80px !important;
+  }
+
+  /* ── Feed width on mobile ── */
+  .feed-col {
+    max-width: 100% !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  /* ── Garage & Marketplace grids — single column ── */
+  .cars-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .market-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+    padding: 4px 14px 14px;
+  }
+
+  /* ── Modals fullscreen on mobile ── */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-box,
+  .cp-modal-box {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  /* ── Spacing adjustments for mobile ── */
+  .feed-bar {
+    padding: 14px 16px 10px;
+  }
+
+  .stories {
+    gap: 12px;
+    padding: 14px 14px;
+  }
+
+  .chips {
+    padding: 10px 14px;
+  }
+
+  .post-header {
+    padding: 12px 14px 8px;
+  }
+
+  .post-body {
+    padding: 6px 14px 14px;
+  }
+
+  .post-actions {
+    padding: 8px 10px 4px;
+  }
+
+  /* ── Compare table scroll ── */
+  .compare-table {
+    overflow-x: auto;
+    padding: 12px;
+  }
+
+  .compare-cell {
+    min-width: 70px;
+    font-size: 11px;
+  }
+
+  /* ── Garage profile stack on small screens ── */
+  .garage-profile {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .garage-stats {
+    width: 100%;
+    justify-content: space-around;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+}
+
+/* ── Minimum touch targets for all interactive elements ── */
+@media (pointer: coarse) {
+  .act-btn,
+  .chip,
+  .event-join-btn,
+  .event-more,
+  .follow-pill,
+  .sug-follow,
+  .nav-btn {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ── Extra small screens (< 400px) ── */
+@media (max-width: 400px) {
+  .logo {
+    font-size: 24px;
+  }
+
+  .story-ring {
+    width: 48px;
+    height: 48px;
+  }
+
+  .story-inner {
+    font-size: 18px;
+  }
+
+  .spec-strip {
+    flex-wrap: wrap;
+  }
+
+  .spec-item {
+    flex: 1 1 45%;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+}
