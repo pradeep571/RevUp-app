@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Navbar() {
@@ -27,7 +27,9 @@ export default function Navbar() {
         ))}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div className="avatar">{session.user.email[0].toUpperCase()}</div>
+        <Link to="/profile" style={{ textDecoration: 'none' }}>
+          <div className="avatar" style={{ cursor: 'pointer' }}>{session.user.email[0].toUpperCase()}</div>
+        </Link>
         <button
           onClick={logout}
           style={{

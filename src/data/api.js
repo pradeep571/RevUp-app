@@ -13,6 +13,16 @@ export async function fetchPosts() {
   return data || []
 }
 
+export async function fetchPostsByUser(userId) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
 export async function createPost(postData) {
   const { error } = await supabase.from('posts').insert(postData)
   if (error) throw error
