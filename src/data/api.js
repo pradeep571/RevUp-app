@@ -88,8 +88,30 @@ export async function deleteComment(commentId) {
 export async function fetchProfile(userId) {
   const { data } = await supabase
     .from('profiles')
-    .select('username, full_name')
+    .select('username, full_name, location')
     .eq('id', userId)
     .maybeSingle()
   return data
+}
+
+// ── Cars ────────────────────────────────────
+export async function fetchCars(userId) {
+  const { data, error } = await supabase
+    .from('cars')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  
+  if (error) throw error
+  return data || []
+}
+
+export async function addCar(carData) {
+  const { error } = await supabase.from('cars').insert(carData)
+  if (error) throw error
+}
+
+export async function deleteCar(carId) {
+  const { error } = await supabase.from('cars').delete().eq('id', carId)
+  if (error) throw error
 }

@@ -1,10 +1,16 @@
 export default function CarCard({ car, onSelect }) {
   return (
     <div className="car-card" onClick={() => onSelect(car)}>
-      <div className="car-card-img" style={{ background: car.imgBg }}>
-        <span style={{ fontSize: '52px' }}>{car.emoji}</span>
-        <div className="car-card-img-overlay"><span className={`event-tag ${car.tag}`}>{car.tagLabel}</span></div>
-      </div>
+      {car.image_url ? (
+        <div className="car-card-img" style={{ backgroundImage: `url(${car.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+          <div className="car-card-img-overlay"><span className={`event-tag ${car.tag}`}>{car.tagLabel}</span></div>
+        </div>
+      ) : (
+        <div className="car-card-img" style={{ background: car.imgBg }}>
+          <span style={{ fontSize: '52px' }}>{car.emoji}</span>
+          <div className="car-card-img-overlay"><span className={`event-tag ${car.tag}`}>{car.tagLabel}</span></div>
+        </div>
+      )}
       <div className="car-card-body">
         <div className="car-card-name">{car.year} {car.make} {car.model}</div>
         <div className="car-card-engine">{car.engine}</div>
