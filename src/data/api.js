@@ -98,10 +98,18 @@ export async function deleteComment(commentId) {
 export async function fetchProfile(userId) {
   const { data } = await supabase
     .from('profiles')
-    .select('username, full_name, location')
+    .select('username, full_name, location, cover_url')
     .eq('id', userId)
     .maybeSingle()
   return data
+}
+
+export async function updateProfile(userId, updateData) {
+  const { error } = await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('id', userId)
+  if (error) throw error
 }
 
 // ── Cars ────────────────────────────────────
