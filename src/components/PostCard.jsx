@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { fetchLikes, addLike, removeLike, fetchCommentCount, fetchComments, addComment, deleteComment, deletePost, fetchProfile } from '../data/api'
+import { 
+  fetchLikes, addLike, removeLike, 
+  fetchCommentCount, fetchComments, 
+  addComment, deleteComment, 
+  deletePost, fetchProfile,
+  followUser, unfollowUser, checkFollowing
+} from '../data/api'
 
 export default function PostCard({ post, onDelete }) {
   const { session } = useAuth()
@@ -19,17 +25,40 @@ export default function PostCard({ post, onDelete }) {
   // ── UI state ──
   const [saved, setSaved] = useState(false)
   const [following, setFollowing] = useState(false)
+  const [followingLoading, setFollowingLoading] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [authorName, setAuthorName] = useState('')
 
   const isOwner = session.user.id === post.user_id
 
-  // ── Fetch author name ──
+  // ── Fetch author name & following status ──
   useEffect(() => {
     fetchProfile(post.user_id).then(data => {
       setAuthorName(data ? (data.full_name || data.username) : 'User_' + post.user_id.slice(0, 5))
     })
-  }, [post.user_id])
+
+    if (!isOwner && session?.user?.id) {
+      checkFollowing(session.user.id, post.user_id).then(setFollowing)
+    }
+  }, [post.user_id, isOwner, session?.user?.id])
+
+  async function handleFollowToggle() {
+    if (!session?.user?.id || isOwner || followingLoading) return
+    setFollowingLoading(true)
+    try {
+      if (following) {
+        await unfollowUser(session.user.id, post.user_id)
+        setFollowing(false)
+      } else {
+        await followUser(session.user.id, post.user_id)
+        setFollowing(true)
+      }
+    } catch (err) {
+      console.error('Follow error:', err)
+    } finally {
+      setFollowingLoading(false)
+    }
+  }
 
   // ── Fetch like count + whether this user liked ──
   useEffect(() => {
@@ -111,10 +140,10 @@ export default function PostCard({ post, onDelete }) {
       {/* ── Header ── */}
       <div className="post-header">
         <div className="post-avatar" style={{ background: 'linear-gradient(135deg,#f0c040,#e8a020)', color: '#000' }}>
-          {session.user.email[0].toUpperCase()}
+          {authorName[0]?.toUpperCase() || 'U'}
         </div>
         <div style={{ flex: 1 }}>
-          <div className="post-name">{authorName}</div>
+          <div className="post-name" style={{ cursor: 'pointer' }} onClick={() => window.location.href = `/profile/${post.user_id}`}>{authorName}</div>
           <div className="post-handle">
             {post.car_tag ? `🚗 ${post.car_tag}` : ''} · {timeAgo(post.created_at)}
           </div>
@@ -123,9 +152,10 @@ export default function PostCard({ post, onDelete }) {
         {!isOwner && (
           <button
             className={following ? 'follow-pill following' : 'follow-pill'}
-            onClick={() => setFollowing(!following)}
+            onClick={handleFollowToggle}
+            disabled={followingLoading}
           >
-            {following ? 'Following ✓' : '+ Follow'}
+            {followingLoading ? '...' : (following ? 'Following ✓' : '+ Follow')}
           </button>
         )}
 

@@ -71,8 +71,6 @@ export default function FeedPage() {
         ))}
       </aside>
 
-      <button className="create-post-btn" onClick={() => setShowCreate(true)} title="Create Post">＋</button>
-
       {showCreate && (
         <CreatePostModal
           onClose={() => setShowCreate(false)}

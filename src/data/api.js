@@ -112,6 +112,28 @@ export async function updateProfile(userId, updateData) {
   if (error) throw error
 }
 
+// ── Follows ─────────────────────────────────
+export async function followUser(followerId, followingId) {
+  const { error } = await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId })
+  if (error) throw error
+}
+
+export async function unfollowUser(followerId, followingId) {
+  const { error } = await supabase.from('follows').delete().eq('follower_id', followerId).eq('following_id', followingId)
+  if (error) throw error
+}
+
+export async function fetchFollowCounts(userId) {
+  const { count: followers } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId)
+  const { count: following } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId)
+  return { followers: followers || 0, following: following || 0 }
+}
+
+export async function checkFollowing(followerId, followingId) {
+  const { data } = await supabase.from('follows').select('id').eq('follower_id', followerId).eq('following_id', followingId).maybeSingle()
+  return !!data
+}
+
 // ── Cars ────────────────────────────────────
 export async function fetchCars(userId) {
   const { data, error } = await supabase

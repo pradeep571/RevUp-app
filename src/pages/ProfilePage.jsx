@@ -1,7 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { fetchProfile, fetchCars, fetchPostsByUser, updateProfile } from '../data/api'
+import { 
+  fetchProfile, 
+  fetchCars, 
+  fetchPostsByUser, 
+  updateProfile,
+  followUser,
+  unfollowUser,
+  fetchFollowCounts,
+  checkFollowing
+} from '../data/api'
 import { uploadImage } from '../lib/uploadImage'
 import CarCard from '../components/CarCard'
 import PostCard from '../components/PostCard'
@@ -23,6 +32,12 @@ export default function ProfilePage() {
   const [copied, setCopied] = useState(false)
   const [uploading, setUploading] = useState(false)
 
+  // Follow Stats
+  const [followerCount, setFollowerCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followingLoading, setFollowingLoading] = useState(false)
+
   const defaultBanner = 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1000'
 
   useEffect(() => {
@@ -30,21 +45,49 @@ export default function ProfilePage() {
       if (!userId) return
       setLoading(true)
       try {
-        const [profData, carsData, postsData] = await Promise.all([
+        const [profData, carsData, postsData, followData] = await Promise.all([
           fetchProfile(userId),
           fetchCars(userId),
-          fetchPostsByUser(userId)
+          fetchPostsByUser(userId),
+          fetchFollowCounts(userId)
         ])
         setProfile(profData || { username: 'Racer', full_name: 'Unknown User', location: 'Unknown' })
         setCars(carsData || [])
         setPosts(postsData || [])
+        setFollowerCount(followData.followers)
+        setFollowingCount(followData.following)
+
+        if (!isOwner && session?.user?.id) {
+          const followingStatus = await checkFollowing(session.user.id, userId)
+          setIsFollowing(followingStatus)
+        }
       } catch (err) {
         console.error("Failed to load profile details", err)
       }
       setLoading(false)
     }
     loadData()
-  }, [userId])
+  }, [userId, isOwner, session?.user?.id])
+
+  const handleFollow = async () => {
+    if (!session?.user?.id || isOwner || followingLoading) return
+    setFollowingLoading(true)
+    try {
+      if (isFollowing) {
+        await unfollowUser(session.user.id, userId)
+        setIsFollowing(false)
+        setFollowerCount(prev => prev - 1)
+      } else {
+        await followUser(session.user.id, userId)
+        setIsFollowing(true)
+        setFollowerCount(prev => prev + 1)
+      }
+    } catch (err) {
+      console.error("Follow error:", err)
+    } finally {
+      setFollowingLoading(false)
+    }
+  }
 
   const handleBannerUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -121,9 +164,26 @@ export default function ProfilePage() {
           @{profile?.username} · 📍 {profile?.location || 'The Track'}
         </div>
 
-        <button className="profile-share-btn" onClick={handleShare}>
-          {copied ? '✅ Link Copied!' : '🔗 Share Profile'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {!isOwner && (
+            <button 
+              className={`profile-share-btn ${isFollowing ? 'following' : ''}`} 
+              onClick={handleFollow}
+              style={{ 
+                background: isFollowing ? 'transparent' : 'var(--gold)', 
+                color: isFollowing ? 'var(--text)' : '#000',
+                borderColor: isFollowing ? 'var(--border)' : 'var(--gold)'
+              }}
+              disabled={followingLoading}
+            >
+              {followingLoading ? '...' : (isFollowing ? '✓ Following' : '+ Follow Crew')}
+            </button>
+          )}
+          
+          <button className="profile-share-btn" onClick={handleShare}>
+            {copied ? '✅ Link Copied!' : '🔗 Share Profile'}
+          </button>
+        </div>
 
         {/* Glass Stat Grid */}
         <div className="profile-stat-grid">
@@ -132,12 +192,12 @@ export default function ProfilePage() {
             <span className="stat-lbl-premium">Cars</span>
           </div>
           <div className="glass-stat-card">
-            <span className="stat-val-premium hp-highlight">{hpSum >= 1000 ? (hpSum/1000).toFixed(1) + 'K' : hpSum}</span>
-            <span className="stat-lbl-premium">Total HP</span>
+            <span className="stat-val-premium hp-highlight">{followerCount >= 1000 ? (followerCount/1000).toFixed(1) + 'K' : followerCount}</span>
+            <span className="stat-lbl-premium">Followers</span>
           </div>
           <div className="glass-stat-card">
-            <span className="stat-val-premium" style={{ color: '#ff4d2e' }}>{totalLikes >= 1000 ? (totalLikes/1000).toFixed(1) + 'K' : totalLikes}</span>
-            <span className="stat-lbl-premium">Total Likes</span>
+            <span className="stat-val-premium" style={{ color: '#ff4d2e' }}>{followingCount >= 1000 ? (followingCount/1000).toFixed(1) + 'K' : followingCount}</span>
+            <span className="stat-lbl-premium">Following</span>
           </div>
         </div>
       </div>
