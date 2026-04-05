@@ -26,9 +26,10 @@ export function useNotifications(userId) {
     loadInitial()
 
     // 2. Realtime Subscription
-    // We listen for INSERTS on the notifications table for THIS user
+    console.log("🔔 Setting up Realtime for user:", userId)
+    
     const channel = supabase
-      .channel(`user-notifications-${userId}`)
+      .channel(`notifs:${userId.slice(0, 8)}`) // Shorter, unique channel name
       .on(
         'postgres_changes',
         {
@@ -38,27 +39,33 @@ export function useNotifications(userId) {
           filter: `user_id=eq.${userId}`
         },
         async (payload) => {
-          console.log("New notification received:", payload)
+          console.log("🔥 LIVE NOTIFICATION RECEIVED:", payload)
           
-          // Fetch the actor profile for the new notification (Realtime payload doesn't include joins)
-          const { data: actorProfile } = await supabase
-            .from('profiles')
-            .select('username, full_name')
-            .eq('id', payload.new.actor_id)
-            .single()
+          try {
+            const { data: actorProfile } = await supabase
+              .from('profiles')
+              .select('username, full_name')
+              .eq('id', payload.new.actor_id)
+              .single()
 
-          const newNotif = {
-            ...payload.new,
-            profiles: actorProfile
+            const newNotif = {
+              ...payload.new,
+              profiles: actorProfile
+            }
+
+            setNotifications(prev => [newNotif, ...prev].slice(0, 20))
+            setUnreadCount(prev => prev + 1)
+          } catch (err) {
+            console.error("Error enrichment live notif:", err)
           }
-
-          setNotifications(prev => [newNotif, ...prev].slice(0, 20))
-          setUnreadCount(prev => prev + 1)
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log(`📡 Notification Sync Status for ${userId.slice(0,8)}:`, status)
+      })
 
     return () => {
+      console.log("🔌 Disconnecting Notif Sync")
       supabase.removeChannel(channel)
     }
   }, [userId])
