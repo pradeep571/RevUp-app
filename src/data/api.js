@@ -33,6 +33,40 @@ export async function deletePost(postId) {
   if (error) throw error
 }
 
+// ── Notifications ───────────────────────────
+export async function createNotification({ user_id, actor_id, type, entity_id }) {
+  // Don't notify yourself
+  if (user_id === actor_id) return
+
+  const { error } = await supabase.from('notifications').insert({
+    user_id,
+    actor_id,
+    type,
+    entity_id
+  })
+  if (error) console.error("Notification trigger error:", error.message)
+}
+
+export async function fetchNotifications(userId) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*, profiles!actor_id(username, full_name)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(15)
+
+  if (error) throw error
+  return data || []
+}
+
+export async function markAsRead(notificationId) {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('id', notificationId)
+  if (error) throw error
+}
+
 // ── Likes ───────────────────────────────────
 export async function fetchLikes(postId) {
   const { data } = await supabase
@@ -43,7 +77,19 @@ export async function fetchLikes(postId) {
 }
 
 export async function addLike(postId, userId) {
+  // 1. Add the like
   await supabase.from('likes').insert({ post_id: postId, user_id: userId })
+
+  // 2. Trigger notification for post owner
+  const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single()
+  if (post && post.user_id !== userId) {
+    await createNotification({
+      user_id: post.user_id,
+      actor_id: userId,
+      type: 'like',
+      entity_id: postId
+    })
+  }
 }
 
 export async function removeLike(postId, userId) {
@@ -82,12 +128,24 @@ export async function fetchComments(postId) {
 }
 
 export async function addComment(postId, userId, content) {
+  // 1. Add comment
   const { error } = await supabase.from('comments').insert({
     post_id: postId,
     user_id: userId,
     content,
   })
   if (error) throw error
+
+  // 2. Trigger notification for post owner
+  const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single()
+  if (post && post.user_id !== userId) {
+    await createNotification({
+      user_id: post.user_id,
+      actor_id: userId,
+      type: 'comment',
+      entity_id: postId
+    })
+  }
 }
 
 export async function deleteComment(commentId) {
@@ -114,8 +172,17 @@ export async function updateProfile(userId, updateData) {
 
 // ── Follows ─────────────────────────────────
 export async function followUser(followerId, followingId) {
+  // 1. Add Follow
   const { error } = await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId })
   if (error) throw error
+
+  // 2. Trigger notification
+  await createNotification({
+    user_id: followingId,
+    actor_id: followerId,
+    type: 'follow',
+    entity_id: followerId
+  })
 }
 
 export async function unfollowUser(followerId, followingId) {
@@ -147,21 +214,63 @@ export async function fetchFollowing(followerId) {
 }
 
 export async function fetchFollowersProfiles(userId) {
-  const { data, error } = await supabase
+  // 1. Get the list of IDs who follow target user
+  const { data: followRows, error: followErr } = await supabase
     .from('follows')
-    .select('follower:profiles!follower_id(id, username, full_name, location)')
+    .select('follower_id')
     .eq('following_id', userId)
-  if (error) throw error
-  return data.map(f => f.follower) || []
+
+  if (followErr) {
+    console.error("Followers ID fetch error:", followErr.message)
+    return []
+  }
+
+  if (!followRows || followRows.length === 0) return []
+
+  const followerIds = followRows.map(r => r.follower_id)
+
+  // 2. Fetch profiles for those IDs
+  const { data: profiles, error: profErr } = await supabase
+    .from('profiles')
+    .select('id, username, full_name, location')
+    .in('id', followerIds)
+
+  if (profErr) {
+    console.error("Followers profile fetch error:", profErr.message)
+    return []
+  }
+
+  return profiles || []
 }
 
 export async function fetchFollowingProfiles(userId) {
-  const { data, error } = await supabase
+  // 1. Get the list of IDs current user is following
+  const { data: followRows, error: followErr } = await supabase
     .from('follows')
-    .select('following:profiles!following_id(id, username, full_name, location)')
+    .select('following_id')
     .eq('follower_id', userId)
-  if (error) throw error
-  return data.map(f => f.following) || []
+
+  if (followErr) {
+    console.error("Following ID fetch error:", followErr.message)
+    return []
+  }
+
+  if (!followRows || followRows.length === 0) return []
+
+  const followingIds = followRows.map(r => r.following_id)
+
+  // 2. Fetch profiles for those IDs
+  const { data: profiles, error: profErr } = await supabase
+    .from('profiles')
+    .select('id, username, full_name, location')
+    .in('id', followingIds)
+
+  if (profErr) {
+    console.error("Following profile fetch error:", profErr.message)
+    return []
+  }
+
+  return profiles || []
 }
 
 // ── Cars ────────────────────────────────────
@@ -206,8 +315,20 @@ export async function fetchEventAttendees(eventId) {
 }
 
 export async function attendEvent(eventId, userId) {
+  // 1. Attend
   const { error } = await supabase.from('event_attendees').insert({ event_id: eventId, user_id: userId })
   if (error) throw error
+
+  // 2. Trigger notification for event owner
+  const { data: event } = await supabase.from('events').select('creator_id').eq('id', eventId).single()
+  if (event && event.creator_id !== userId) {
+    await createNotification({
+      user_id: event.creator_id,
+      actor_id: userId,
+      type: 'event_join',
+      entity_id: eventId
+    })
+  }
 }
 
 export async function leaveEvent(eventId, userId) {
@@ -228,3 +349,4 @@ export async function injectDummyEvents(userId) {
     throw error
   }
 }
+

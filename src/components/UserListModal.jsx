@@ -17,39 +17,47 @@ export default function UserListModal({ title, users, onClose }) {
               No racers found in this crew. 🏎️
             </div>
           ) : (
-            users.map(user => (
-              <div 
-                key={user.id} 
-                className="user-list-item" 
-                onClick={() => {
-                  navigate(`/profile/${user.id}`)
-                  onClose()
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid var(--border)',
-                  transition: 'background 0.2s'
-                }}
-              >
-                <div className="post-avatar" style={{ background: 'linear-gradient(135deg, var(--gold), var(--red))', width: '40px', height: '40px', color: '#000', flexShrink: 0 }}>
-                  {(user.full_name || user.username || '?')[0].toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '14px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {user.full_name || user.username}
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    @{user.username}
-                  </div>
-                </div>
+            users.map((profile, i) => {
+              // Ensure we have a profile object
+              if (!profile) return null
+              
+              const displayName = profile.full_name || profile.username || 'Unknown Driver'
+              const initial = displayName[0].toUpperCase()
 
-                <div style={{ color: 'var(--gold)', fontSize: '18px' }}>›</div>
-              </div>
-            ))
+              return (
+                <div 
+                  key={profile.id || i}
+                  className="user-list-item" 
+                  onClick={() => {
+                    navigate(`/profile/${profile.id}`)
+                    onClose()
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid var(--border)',
+                    transition: 'background 0.2s'
+                  }}
+                >
+                  <div className="post-avatar" style={{ background: 'linear-gradient(135deg, var(--gold), var(--red))', width: '40px', height: '40px', color: '#000', flexShrink: 0 }}>
+                    {initial}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {displayName}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      @{profile.username || 'racer'}
+                    </div>
+                  </div>
+
+                  <div style={{ color: 'var(--gold)', fontSize: '18px' }}>›</div>
+                </div>
+              )
+            })
           )}
         </div>
       </div>
