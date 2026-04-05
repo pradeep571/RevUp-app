@@ -35,8 +35,8 @@ export async function deletePost(postId) {
 
 // ── Notifications ───────────────────────────
 export async function createNotification({ user_id, actor_id, type, entity_id }) {
-  // Don't notify yourself
-  if (user_id === actor_id) return
+  // Commented out to allow testing with same account in multiple tabs
+  // if (user_id === actor_id) return
 
   const { error } = await supabase.from('notifications').insert({
     user_id,
