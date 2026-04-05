@@ -9,15 +9,18 @@ import {
   followUser,
   unfollowUser,
   fetchFollowCounts,
-  checkFollowing
+  checkFollowing,
+  fetchFollowersProfiles,
+  fetchFollowingProfiles
 } from '../data/api'
 import { uploadImage } from '../lib/uploadImage'
 import CarCard from '../components/CarCard'
 import PostCard from '../components/PostCard'
 import CarDetail from '../components/CarDetail'
+import UserListModal from '../components/UserListModal'
 
 export default function ProfilePage() {
-  const { session } = useAuth()
+  const { session, logout } = useAuth()
   const { userId: urlUserId } = useParams()
   const userId = urlUserId || session?.user?.id
   const isOwner = session?.user?.id === userId
@@ -37,6 +40,11 @@ export default function ProfilePage() {
   const [followingCount, setFollowingCount] = useState(0)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followingLoading, setFollowingLoading] = useState(false)
+
+  // Follower/Following Modal
+  const [showList, setShowList] = useState(false)
+  const [listTitle, setListTitle] = useState('')
+  const [listUsers, setListUsers] = useState([])
 
   const defaultBanner = 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1000'
 
@@ -106,7 +114,11 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return <div className="feed-col" style={{ alignItems: 'center', paddingTop: '40px' }}>Loading Profile... 🏁</div>
+    return (
+      <div className="app-layout">
+        <div className="feed-col" style={{ alignItems: 'center', paddingTop: '40px' }}>Loading Profile... 🏁</div>
+      </div>
+    )
   }
 
   // Calculate stats
@@ -123,133 +135,167 @@ export default function ProfilePage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleOpenList = async (type) => {
+    setListTitle(type)
+    setListUsers([])
+    setShowList(true)
+    try {
+      const data = type === 'Followers' 
+        ? await fetchFollowersProfiles(userId)
+        : await fetchFollowingProfiles(userId)
+      setListUsers(data)
+    } catch (err) {
+      console.error(`Error fetching ${type}:`, err)
+    }
+  }
+
   return (
-    <div className="feed-col" style={{ maxWidth: '640px', margin: '0 auto' }}>
-      
-      {/* Premium Dynamic Hero Section */}
-      <div 
-        className="profile-cover" 
-        style={{ 
-          backgroundImage: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.7)), url(${profile?.cover_url || defaultBanner})` 
-        }}
-      >
-        {isOwner && (
-          <button 
-            className="profile-share-btn" 
-            style={{ position: 'absolute', top: '12px', right: '12px', margin: 0, padding: '6px 10px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? '⌛ Uploading...' : '📷 Edit Banner'}
-          </button>
-        )}
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          style={{ display: 'none' }} 
-          accept="image/*" 
-          onChange={handleBannerUpload} 
-        />
+    <div className="app-layout">
+      <div className="feed-col" style={{ maxWidth: '640px' }}>
         
-        <div className="profile-avatar-wrapper">
-          <div className="profile-avatar-big">
-            {avatarText}
-          </div>
-        </div>
-      </div>
-
-      <div className="profile-header-info">
-        <h1 className="profile-name-bebas">{profile?.full_name}</h1>
-        <div className="profile-username-tag">
-          @{profile?.username} · 📍 {profile?.location || 'The Track'}
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {!isOwner && (
+        {/* Premium Dynamic Hero Section */}
+        <div 
+          className="profile-cover" 
+          style={{ 
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.7)), url(${profile?.cover_url || defaultBanner})` 
+          }}
+        >
+          {isOwner && (
             <button 
-              className={`profile-share-btn ${isFollowing ? 'following' : ''}`} 
-              onClick={handleFollow}
-              style={{ 
-                background: isFollowing ? 'transparent' : 'var(--gold)', 
-                color: isFollowing ? 'var(--text)' : '#000',
-                borderColor: isFollowing ? 'var(--border)' : 'var(--gold)'
-              }}
-              disabled={followingLoading}
+              className="profile-share-btn" 
+              style={{ position: 'absolute', top: '12px', right: '12px', margin: 0, padding: '6px 10px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
             >
-              {followingLoading ? '...' : (isFollowing ? '✓ Following' : '+ Follow Crew')}
+              {uploading ? '⌛ Uploading...' : '📷 Edit Banner'}
             </button>
           )}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            style={{ display: 'none' }} 
+            accept="image/*" 
+            onChange={handleBannerUpload} 
+          />
           
-          <button className="profile-share-btn" onClick={handleShare}>
-            {copied ? '✅ Link Copied!' : '🔗 Share Profile'}
+          <div className="profile-avatar-wrapper">
+            <div className="profile-avatar-big">
+              {avatarText}
+            </div>
+          </div>
+        </div>
+
+        <div className="profile-header-info">
+          <h1 className="profile-name-bebas">{profile?.full_name}</h1>
+          <div className="profile-username-tag">
+            @{profile?.username} · 📍 {profile?.location || 'The Track'}
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {!isOwner && (
+              <button 
+                className={`profile-share-btn ${isFollowing ? 'following' : ''}`} 
+                onClick={handleFollow}
+                style={{ 
+                  background: isFollowing ? 'transparent' : 'var(--gold)', 
+                  color: isFollowing ? 'var(--text)' : '#000',
+                  borderColor: isFollowing ? 'var(--border)' : 'var(--gold)'
+                }}
+                disabled={followingLoading}
+              >
+                {followingLoading ? '...' : (isFollowing ? '✓ Following' : '+ Follow Crew')}
+              </button>
+            )}
+            
+            <button className="profile-share-btn" onClick={handleShare}>
+              {copied ? '✅ Link Copied!' : '🔗 Share Profile'}
+            </button>
+
+            {isOwner && (
+              <button 
+                className="profile-share-btn" 
+                onClick={logout} 
+                style={{ color: 'var(--red)', borderColor: 'rgba(255, 77, 46, 0.3)' }}
+              >
+                🚪 Log Out
+              </button>
+            )}
+          </div>
+
+          {/* Glass Stat Grid */}
+          <div className="profile-stat-grid">
+            <div className="glass-stat-card">
+              <span className="stat-val-premium">{carCount}</span>
+              <span className="stat-lbl-premium">Cars</span>
+            </div>
+            <div className="glass-stat-card" onClick={() => handleOpenList('Followers')} style={{ cursor: 'pointer' }}>
+              <span className="stat-val-premium hp-highlight">{followerCount >= 1000 ? (followerCount/1000).toFixed(1) + 'K' : followerCount}</span>
+              <span className="stat-lbl-premium">Followers</span>
+            </div>
+            <div className="glass-stat-card" onClick={() => handleOpenList('Following')} style={{ cursor: 'pointer' }}>
+              <span className="stat-val-premium" style={{ color: '#ff4d2e' }}>{followingCount >= 1000 ? (followingCount/1000).toFixed(1) + 'K' : followingCount}</span>
+              <span className="stat-lbl-premium">Following</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Modern Tabs */}
+        <div className="profile-tab-bar">
+          <button 
+            className={`profile-tab ${activeTab === 'garage' ? 'active' : ''}`}
+            onClick={() => setActiveTab('garage')}
+          >
+            Garage 🚘
+          </button>
+          <button 
+            className={`profile-tab ${activeTab === 'posts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('posts')}
+          >
+            Feed 📸
           </button>
         </div>
 
-        {/* Glass Stat Grid */}
-        <div className="profile-stat-grid">
-          <div className="glass-stat-card">
-            <span className="stat-val-premium">{carCount}</span>
-            <span className="stat-lbl-premium">Cars</span>
-          </div>
-          <div className="glass-stat-card">
-            <span className="stat-val-premium hp-highlight">{followerCount >= 1000 ? (followerCount/1000).toFixed(1) + 'K' : followerCount}</span>
-            <span className="stat-lbl-premium">Followers</span>
-          </div>
-          <div className="glass-stat-card">
-            <span className="stat-val-premium" style={{ color: '#ff4d2e' }}>{followingCount >= 1000 ? (followingCount/1000).toFixed(1) + 'K' : followingCount}</span>
-            <span className="stat-lbl-premium">Following</span>
-          </div>
+        {/* Content Area */}
+        <div className="profile-content-area">
+          {activeTab === 'garage' && (
+            <div className="cars-grid" style={{ padding: 0 }}>
+              {cars.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 0', gridColumn: '1/-1' }}>
+                  <div style={{ fontSize: '40px', marginBottom: '10px' }}>📦</div>
+                  No cars in the garage yet.
+                </div>
+              ) : (
+                cars.map(c => <CarCard key={c.id} car={c} onSelect={setSelectedCar} />)
+              )}
+            </div>
+          )}
+
+          {activeTab === 'posts' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {posts.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 0' }}>
+                  <div style={{ fontSize: '40px', marginBottom: '10px' }}>📭</div>
+                  No activity on the feed.
+                </div>
+              ) : (
+                posts.map(p => <PostCard key={p.id} post={{...p, profile}} />)
+              )}
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Modern Tabs */}
-      <div className="profile-tab-bar">
-        <button 
-          className={`profile-tab ${activeTab === 'garage' ? 'active' : ''}`}
-          onClick={() => setActiveTab('garage')}
-        >
-          Garage 🚘
-        </button>
-        <button 
-          className={`profile-tab ${activeTab === 'posts' ? 'active' : ''}`}
-          onClick={() => setActiveTab('posts')}
-        >
-          Feed 📸
-        </button>
-      </div>
-
-      {/* Content Area */}
-      <div className="profile-content-area">
-        {activeTab === 'garage' && (
-          <div className="cars-grid" style={{ padding: 0 }}>
-            {cars.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 0', gridColumn: '1/-1' }}>
-                <div style={{ fontSize: '40px', marginBottom: '10px' }}>📦</div>
-                No cars in the garage yet.
-              </div>
-            ) : (
-              cars.map(c => <CarCard key={c.id} car={c} onSelect={setSelectedCar} />)
-            )}
-          </div>
+        {selectedCar && (
+          <CarDetail car={selectedCar} onClose={() => setSelectedCar(null)} />
         )}
 
-        {activeTab === 'posts' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {posts.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 0' }}>
-                <div style={{ fontSize: '40px', marginBottom: '10px' }}>📭</div>
-                No activity on the feed.
-              </div>
-            ) : (
-              posts.map(p => <PostCard key={p.id} post={{...p, profile}} />)
-            )}
-          </div>
+        {showList && (
+          <UserListModal 
+            title={listTitle} 
+            users={listUsers} 
+            onClose={() => setShowList(false)} 
+          />
         )}
       </div>
-
-      {selectedCar && (
-        <CarDetail car={selectedCar} onClose={() => setSelectedCar(null)} />
-      )}
     </div>
   )
 }

@@ -56,34 +56,40 @@ export default function EventsPage() {
     : enrichedEvents.filter(e => e.type === filter || e.location.toLowerCase().includes(filter.toLowerCase()))
 
   if (loading) {
-    return <div className="feed-col" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center', padding: '40px' }}>Finding local events... 📍</div>
+    return (
+      <div className="app-layout">
+        <div className="feed-col" style={{ maxWidth: '600px', textAlign: 'center', padding: '40px' }}>Finding local events... 📍</div>
+      </div>
+    )
   }
 
   return (
-    <div className="feed-col" style={{ maxWidth: '600px', margin: '0 auto' }}>
-      <div className="feed-bar">
-        <div><span className="feed-heading">Events</span><span className="feed-sub">Bangalore & beyond 📍</span></div>
-        <button className="create-event-btn">+ Create</button>
-      </div>
-      <div className="chips">
-        {EVENT_FILTERS.map(f => <button key={f} className={filter === f ? 'chip active' : 'chip'} onClick={() => setFilter(f)}>{f}</button>)}
-      </div>
-      <div className="events-list">
-        {filtered.length === 0 ? (
-          <div className="events-empty">No events found 🚗</div>
-        ) : (
-          filtered.map(event => <EventCard key={event.id} event={event} onClick={setSelectedEvent} />)
+    <div className="app-layout">
+      <div className="feed-col" style={{ maxWidth: '600px' }}>
+        <div className="feed-bar">
+          <div><span className="feed-heading">Events</span><span className="feed-sub">Bangalore & beyond 📍</span></div>
+          <button className="create-event-btn">+ Create</button>
+        </div>
+        <div className="chips">
+          {EVENT_FILTERS.map(f => <button key={f} className={filter === f ? 'chip active' : 'chip'} onClick={() => setFilter(f)}>{f}</button>)}
+        </div>
+        <div className="events-list">
+          {filtered.length === 0 ? (
+            <div className="events-empty">No events found 🚗</div>
+          ) : (
+            filtered.map(event => <EventCard key={event.id} event={event} onClick={setSelectedEvent} />)
+          )}
+        </div>
+
+        {selectedEvent && (
+          <EventDetail 
+            event={selectedEvent} 
+            attendees={attendeesMap[selectedEvent.id] || []}
+            onClose={() => setSelectedEvent(null)}
+            onUpdateAttendees={handleUpdateAttendees}
+          />
         )}
       </div>
-
-      {selectedEvent && (
-        <EventDetail 
-          event={selectedEvent} 
-          attendees={attendeesMap[selectedEvent.id] || []}
-          onClose={() => setSelectedEvent(null)}
-          onUpdateAttendees={handleUpdateAttendees}
-        />
-      )}
     </div>
   )
 }

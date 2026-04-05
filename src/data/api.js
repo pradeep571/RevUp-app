@@ -134,6 +134,36 @@ export async function checkFollowing(followerId, followingId) {
   return !!data
 }
 
+export async function fetchAllProfiles() {
+  const { data, error } = await supabase.from('profiles').select('*').order('username', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+export async function fetchFollowing(followerId) {
+  const { data, error } = await supabase.from('follows').select('following_id').eq('follower_id', followerId)
+  if (error) throw error
+  return data.map(f => f.following_id) || []
+}
+
+export async function fetchFollowersProfiles(userId) {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('follower:profiles!follower_id(id, username, full_name, location)')
+    .eq('following_id', userId)
+  if (error) throw error
+  return data.map(f => f.follower) || []
+}
+
+export async function fetchFollowingProfiles(userId) {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('following:profiles!following_id(id, username, full_name, location)')
+    .eq('follower_id', userId)
+  if (error) throw error
+  return data.map(f => f.following) || []
+}
+
 // ── Cars ────────────────────────────────────
 export async function fetchCars(userId) {
   const { data, error } = await supabase

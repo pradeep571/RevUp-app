@@ -55,7 +55,11 @@ export default function GaragePage() {
   const displayHandle = profile?.username ? `@${profile.username}` : ''
 
   if (loading) {
-    return <div className="feed-col" style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'center', padding: '40px' }}>Loading Garage... 🚗</div>
+    return (
+      <div className="app-layout">
+        <div className="feed-col" style={{ maxWidth: '640px', textAlign: 'center', padding: '40px' }}>Loading Garage... 🚗</div>
+      </div>
+    )
   }
 
   function handleCarAdded(newCar) {
@@ -68,82 +72,84 @@ export default function GaragePage() {
   }
 
   return (
-    <div className="feed-col" style={{ maxWidth: '640px', margin: '0 auto' }}>
-      <div className="feed-bar">
-        <div><span className="feed-heading">My Garage</span><span className="feed-sub">{cars.length} cars</span></div>
-        <button className="create-event-btn" onClick={() => setShowForm(true)}>+ Add Car</button>
-      </div>
-      
-      <div className="garage-profile">
-        <div className="garage-avatar">{displayName[0]?.toUpperCase() || 'U'}</div>
-        <div className="garage-info">
-          <div className="garage-name">{displayName}</div>
-          <div className="garage-handle">{displayHandle} {profile?.location ? `· ${profile.location} 📍` : ''}</div>
+    <div className="app-layout">
+      <div className="feed-col" style={{ maxWidth: '640px' }}>
+        <div className="feed-bar">
+          <div><span className="feed-heading">My Garage</span><span className="feed-sub">{cars.length} cars</span></div>
+          <button className="create-event-btn" onClick={() => setShowForm(true)}>+ Add Car</button>
         </div>
-        <div className="garage-stats">
-          <div className="garage-stat"><div className="garage-stat-val">{cars.length}</div><div className="garage-stat-lbl">Cars</div></div>
-          <div className="garage-stat"><div className="garage-stat-val">{totalHP.toLocaleString()}</div><div className="garage-stat-lbl">Total HP</div></div>
-          <div className="garage-stat"><div className="garage-stat-val">{totalPosts}</div><div className="garage-stat-lbl">Posts</div></div>
-        </div>
-      </div>
-      
-      <div className="garage-tabs">
-        {['garage', 'compare'].map(tab => (
-          <button key={tab} className={activeTab === tab ? 'garage-tab active' : 'garage-tab'} onClick={() => setActiveTab(tab)}>
-            {tab === 'garage' ? '🚗 My Cars' : '⚡ Compare'}
-          </button>
-        ))}
-      </div>
-      
-      {activeTab === 'garage' && (
-        <div className="cars-grid">
-          {cars.map(car => <CarCard key={car.id} car={car} onSelect={setSelected} />)}
-          <div className="add-car-tile" onClick={() => setShowForm(true)}>
-            <div className="add-car-plus">+</div>
-            <div className="add-car-label">Add Car</div>
+        
+        <div className="garage-profile">
+          <div className="garage-avatar">{displayName[0]?.toUpperCase() || 'U'}</div>
+          <div className="garage-info">
+            <div className="garage-name">{displayName}</div>
+            <div className="garage-handle">{displayHandle} {profile?.location ? `· ${profile.location} 📍` : ''}</div>
+          </div>
+          <div className="garage-stats">
+            <div className="garage-stat"><div className="garage-stat-val">{cars.length}</div><div className="garage-stat-lbl">Cars</div></div>
+            <div className="garage-stat"><div className="garage-stat-val">{totalHP.toLocaleString()}</div><div className="garage-stat-lbl">Total HP</div></div>
+            <div className="garage-stat"><div className="garage-stat-val">{totalPosts}</div><div className="garage-stat-lbl">Posts</div></div>
           </div>
         </div>
-      )}
-      
-      {activeTab === 'compare' && (
-        <div className="compare-table">
-          <div className="compare-header">
-            <div className="compare-cell compare-label"></div>
-            {cars.map(car => (
-              <div key={car.id} className="compare-cell compare-car-name">
-                <div style={{ fontSize: '22px' }}>{car.emoji}</div>
-                <div>{car.make}</div>
-                <div style={{ color: 'var(--muted)', fontSize: '10px' }}>{car.model}</div>
-              </div>
-            ))}
+        
+        <div className="garage-tabs">
+          {['garage', 'compare'].map(tab => (
+            <button key={tab} className={activeTab === tab ? 'garage-tab active' : 'garage-tab'} onClick={() => setActiveTab(tab)}>
+              {tab === 'garage' ? '🚗 My Cars' : '⚡ Compare'}
+            </button>
+          ))}
+        </div>
+        
+        {activeTab === 'garage' && (
+          <div className="cars-grid">
+            {cars.map(car => <CarCard key={car.id} car={car} onSelect={setSelected} />)}
+            <div className="add-car-tile" onClick={() => setShowForm(true)}>
+              <div className="add-car-plus">+</div>
+              <div className="add-car-label">Add Car</div>
+            </div>
           </div>
-          {[{ lbl: 'Year', key: 'year' }, { lbl: 'HP', key: 'hp' }, { lbl: '0–100', key: 'sprint' }, { lbl: 'Top Speed', key: 'kmph' }, { lbl: 'Engine', key: 'engine' }].map(row => (
-            <div key={row.lbl} className="compare-row">
-              <div className="compare-cell compare-label">{row.lbl}</div>
+        )}
+        
+        {activeTab === 'compare' && (
+          <div className="compare-table">
+            <div className="compare-header">
+              <div className="compare-cell compare-label"></div>
               {cars.map(car => (
-                <div key={car.id} className={`compare-cell ${row.key === 'hp' ? 'compare-highlight' : ''}`}>
-                  {car[row.key]}{row.key === 'hp' ? ' hp' : ''}{row.key === 'kmph' ? ' km/h' : ''}
+                <div key={car.id} className="compare-cell compare-car-name">
+                  <div style={{ fontSize: '22px' }}>{car.emoji}</div>
+                  <div>{car.make}</div>
+                  <div style={{ color: 'var(--muted)', fontSize: '10px' }}>{car.model}</div>
                 </div>
               ))}
             </div>
-          ))}
-        </div>
-      )}
-      
-      {selected && (
-        <CarDetail 
-          car={selected} 
-          onClose={() => setSelected(null)} 
-          onDelete={handleCarDeleted}
-        />
-      )}
-      
-      {showForm && (
-        <AddCarForm 
-          onAdd={handleCarAdded} 
-          onClose={() => setShowForm(false)} 
-        />
-      )}
+            {[{ lbl: 'Year', key: 'year' }, { lbl: 'HP', key: 'hp' }, { lbl: '0–100', key: 'sprint' }, { lbl: 'Top Speed', key: 'kmph' }, { lbl: 'Engine', key: 'engine' }].map(row => (
+              <div key={row.lbl} className="compare-row">
+                <div className="compare-cell compare-label">{row.lbl}</div>
+                {cars.map(car => (
+                  <div key={car.id} className={`compare-cell ${row.key === 'hp' ? 'compare-highlight' : ''}`}>
+                    {car[row.key]}{row.key === 'hp' ? ' hp' : ''}{row.key === 'kmph' ? ' km/h' : ''}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {selected && (
+          <CarDetail 
+            car={selected} 
+            onClose={() => setSelected(null)} 
+            onDelete={handleCarDeleted}
+          />
+        )}
+        
+        {showForm && (
+          <AddCarForm 
+            onAdd={handleCarAdded} 
+            onClose={() => setShowForm(false)} 
+          />
+        )}
+      </div>
     </div>
   )
 }

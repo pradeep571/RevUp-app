@@ -21,17 +21,19 @@ function AppRoutes() {
   return (
     <>
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Navigate to="/feed" replace />} />
-        <Route path="/feed" element={<FeedPage />} />
-        <Route path="/garage" element={<GaragePage />} />
-        <Route path="/market" element={<MarketplacePage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/trending" element={<TrendingPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/profile/:userId" element={<ProfilePage />} />
-        <Route path="*" element={<Navigate to="/feed" replace />} />
-      </Routes>
+      <main className="app-main-wrapper">
+        <Routes>
+          <Route path="/" element={<Navigate to="/feed" replace />} />
+          <Route path="/feed" element={<FeedPage />} />
+          <Route path="/garage" element={<GaragePage />} />
+          <Route path="/market" element={<MarketplacePage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/trending" element={<TrendingPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/:userId" element={<ProfilePage />} />
+          <Route path="*" element={<Navigate to="/feed" replace />} />
+        </Routes>
+      </main>
     </>
   )
 }
