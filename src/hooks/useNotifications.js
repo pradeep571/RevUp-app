@@ -3,12 +3,16 @@ import { supabase } from '../supabase'
 import { fetchNotifications, markAsRead } from '../data/api'
 
 export function useNotifications(userId) {
+  console.log("🛠️ useNotifications Hook Initializing. userId:", userId)
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!userId) return
+    if (!userId) {
+      console.warn("⚠️ useNotifications: No userId provided. Sync paused.")
+      return
+    }
 
     // 1. Initial Fetch
     async function loadInitial() {
