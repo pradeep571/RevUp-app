@@ -82,7 +82,8 @@ export async function addLike(postId, userId) {
 
   // 2. Trigger notification for post owner
   const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single()
-  if (post && post.user_id !== userId) {
+  // if (post && post.user_id !== userId) {
+  if (post) {
     await createNotification({
       user_id: post.user_id,
       actor_id: userId,
@@ -138,7 +139,8 @@ export async function addComment(postId, userId, content) {
 
   // 2. Trigger notification for post owner
   const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single()
-  if (post && post.user_id !== userId) {
+  // if (post && post.user_id !== userId) {
+  if (post) {
     await createNotification({
       user_id: post.user_id,
       actor_id: userId,
@@ -321,7 +323,8 @@ export async function attendEvent(eventId, userId) {
 
   // 2. Trigger notification for event owner
   const { data: event } = await supabase.from('events').select('creator_id').eq('id', eventId).single()
-  if (event && event.creator_id !== userId) {
+  // if (event && event.creator_id !== userId) {
+  if (event) {
     await createNotification({
       user_id: event.creator_id,
       actor_id: userId,

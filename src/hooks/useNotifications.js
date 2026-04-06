@@ -3,37 +3,37 @@ import { supabase } from '../supabase'
 import { fetchNotifications, markAsRead } from '../data/api'
 
 export function useNotifications(userId) {
-  console.log("🛠️ useNotifications Hook Initializing. userId:", userId)
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!userId) {
-      console.warn("⚠️ useNotifications: No userId provided. Sync paused.")
+      console.warn("⚠️ useNotifications: No userId. Sync idle.")
       return
     }
 
-    // 1. Initial Fetch
-    async function loadInitial() {
-      try {
-        const data = await fetchNotifications(userId)
-        setNotifications(data)
-        setUnreadCount(data.filter(n => !n.is_read).length)
-      } catch (err) {
-        console.error("Initial notifications error:", err)
-      } finally {
-        setLoading(false)
+    console.log("🏎️ useNotifications: Booting sync for", userId.slice(0, 8))
+
+    // 1. Load data
+    fetchNotifications(userId).then(data => {
+      setNotifications(data)
+      setUnreadCount(data.filter(n => !n.is_read).length)
+      setLoading(false)
+    })
+
+    // 2. Realtime
+    const channelName = `notifs-${userId.slice(0, 8)}`
+    console.log(`🔌 [${channelName}] Attempting connection...`)
+
+    const channel = supabase.channel(channelName, {
+      config: {
+        broadcast: { self: true },
+        presence: { key: userId }
       }
-    }
-
-    loadInitial()
-
-    // 2. Realtime Subscription
-    console.log("🔔 Setting up Realtime for user:", userId)
+    })
     
-    const channel = supabase
-      .channel(`notifs:${userId.slice(0, 8)}`) // Shorter, unique channel name
+    channel
       .on(
         'postgres_changes',
         {
@@ -43,33 +43,34 @@ export function useNotifications(userId) {
           filter: `user_id=eq.${userId}`
         },
         async (payload) => {
-          console.log("🔥 LIVE NOTIFICATION RECEIVED:", payload)
-          
+          console.log("🔥 NEW LIVE NOTIF:", payload.new)
           try {
-            const { data: actorProfile } = await supabase
+            const { data: actor } = await supabase
               .from('profiles')
               .select('username, full_name')
               .eq('id', payload.new.actor_id)
               .single()
 
-            const newNotif = {
-              ...payload.new,
-              profiles: actorProfile
-            }
-
-            setNotifications(prev => [newNotif, ...prev].slice(0, 20))
+            const enriched = { ...payload.new, profiles: actor }
+            setNotifications(prev => [enriched, ...prev].slice(0, 20))
             setUnreadCount(prev => prev + 1)
-          } catch (err) {
-            console.error("Error enrichment live notif:", err)
+          } catch (e) {
+            console.error("Enrich error:", e)
           }
         }
       )
-      .subscribe((status) => {
-        console.log(`📡 Notification Sync Status for ${userId.slice(0,8)}:`, status)
+      .subscribe((status, err) => {
+        if (err) console.error(`❌ [${channelName}] Error:`, err)
+        console.log(`📡 [${channelName}] Status:`, status)
+        
+        if (status === 'TIMED_OUT') {
+          console.warn("⚠️ Sync Timed Out. Retrying in 3s...")
+          setTimeout(() => channel.subscribe(), 3000)
+        }
       })
 
     return () => {
-      console.log("🔌 Disconnecting Notif Sync")
+      console.log(`🔌 [${channelName}] Cleaning up...`)
       supabase.removeChannel(channel)
     }
   }, [userId])
