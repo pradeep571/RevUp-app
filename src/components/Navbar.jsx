@@ -3,10 +3,17 @@ import { NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useNotifications } from '../hooks/useNotifications'
 import NotificationsDropdown from './NotificationsDropdown'
+import Toast from './Toast'
 
 export default function Navbar() {
   const { session, profile } = useAuth()
-  const { notifications, unreadCount, handleMarkRead, markAllAsRead } = useNotifications(session?.user?.id)
+  const [activeToast, setActiveToast] = useState(null)
+  
+  const { notifications, unreadCount, handleMarkRead, markAllAsRead, handleDelete } = useNotifications(
+    session?.user?.id,
+    (newNotif) => setActiveToast(newNotif)
+  )
+  
   const [showNotifs, setShowNotifs] = useState(false)
   const notifRef = useRef(null)
 
@@ -26,6 +33,7 @@ export default function Navbar() {
     { path: '/garage', label: 'garage', icon: '🚘' },
     { path: '/market', label: 'market', icon: '🛒' },
     { path: '/events', label: 'events', icon: '🏁' },
+    { path: '/messages', label: 'messages', icon: '💬' },
     { path: '/trending', label: 'trending', icon: '🔥' },
   ]
 
@@ -46,11 +54,23 @@ export default function Navbar() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
           
-          <div className="notif-bell-container" ref={notifRef} onClick={() => setShowNotifs(!showNotifs)}>
-            <button className="notif-bell-btn">
-              🔔
-            </button>
-            {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+          <div className="notif-wrapper" ref={notifRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <div className="notif-bell-container" onClick={() => setShowNotifs(!showNotifs)}>
+              <button className="notif-bell-btn">
+                🔔
+              </button>
+              {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+            </div>
+
+            {showNotifs && (
+              <NotificationsDropdown 
+                notifications={notifications} 
+                onMarkRead={handleMarkRead}
+                onMarkAllRead={markAllAsRead}
+                onDelete={handleDelete}
+                onClose={() => setShowNotifs(false)}
+              />
+            )}
           </div>
 
           <Link to="/profile" style={{ textDecoration: 'none' }}>
@@ -59,16 +79,15 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {showNotifs && (
-            <NotificationsDropdown 
-              notifications={notifications} 
-              onMarkRead={handleMarkRead}
-              onClose={() => setShowNotifs(false)}
-            />
-          )}
-
         </div>
       </header>
+
+      {activeToast && (
+        <Toast 
+          notification={activeToast} 
+          onClose={() => setActiveToast(null)} 
+        />
+      )}
 
       <nav className="bottom-nav">
         {pages.map(p => (

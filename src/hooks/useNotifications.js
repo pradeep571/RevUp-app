@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import { fetchNotifications, markAsRead } from '../data/api'
+import { fetchNotifications, markAsRead, markAllNotificationsAsRead, deleteNotification } from '../data/api'
 
-export function useNotifications(userId) {
+export function useNotifications(userId, onNewNotif) {
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -54,18 +54,29 @@ export function useNotifications(userId) {
             const enriched = { ...payload.new, profiles: actor }
             setNotifications(prev => [enriched, ...prev].slice(0, 20))
             setUnreadCount(prev => prev + 1)
+
+            // Trigger Toast if callback provided
+            if (onNewNotif) onNewNotif(enriched)
           } catch (e) {
             console.error("Enrich error:", e)
           }
         }
       )
-      .subscribe((status, err) => {
+    let lastStatus = null
+
+    channel.subscribe((status, err) => {
         if (err) console.error(`❌ [${channelName}] Error:`, err)
-        console.log(`📡 [${channelName}] Status:`, status)
         
-        if (status === 'TIMED_OUT') {
-          console.warn("⚠️ Sync Timed Out. Retrying in 3s...")
-          setTimeout(() => channel.subscribe(), 3000)
+        if (status !== lastStatus) {
+          console.log(`📡 [${channelName}] Status:`, status)
+          lastStatus = status
+        }
+        
+        if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+          console.warn(`⚠️ [${channelName}] Connection issue (${status}). Retrying...`)
+          setTimeout(() => {
+            if (channel) channel.subscribe()
+          }, 3000)
         }
       })
 
@@ -86,10 +97,37 @@ export function useNotifications(userId) {
   }
 
   const markAllAsRead = async () => {
-    // For simplicity, we can just update local state or call a bulk API if we add one
+    if (!userId || unreadCount === 0) return
+    
+    // 1. Optimistic Update
     setUnreadCount(0)
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+
+    // 2. Persistent Update
+    try {
+      await markAllNotificationsAsRead(userId)
+    } catch (err) {
+      console.error("Mark all read error:", err)
+    }
   }
 
-  return { notifications, unreadCount, loading, handleMarkRead, markAllAsRead }
+  const handleDelete = async (id) => {
+    // 1. Optimistic Update
+    const toDelete = notifications.find(n => n.id === id)
+    if (!toDelete) return
+
+    if (!toDelete.is_read) {
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    }
+    setNotifications(prev => prev.filter(n => n.id !== id))
+
+    // 2. Persistent Update
+    try {
+      await deleteNotification(id)
+    } catch (err) {
+      console.error("Delete notification error:", err)
+    }
+  }
+
+  return { notifications, unreadCount, loading, handleMarkRead, markAllAsRead, handleDelete }
 }

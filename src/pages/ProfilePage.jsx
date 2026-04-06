@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { 
   fetchProfile, 
@@ -11,7 +11,8 @@ import {
   fetchFollowCounts,
   checkFollowing,
   fetchFollowersProfiles,
-  fetchFollowingProfiles
+  fetchFollowingProfiles,
+  getOrCreateConversation
 } from '../data/api'
 import { uploadImage } from '../lib/uploadImage'
 import CarCard from '../components/CarCard'
@@ -22,6 +23,7 @@ import UserListModal from '../components/UserListModal'
 export default function ProfilePage() {
   const { session, logout } = useAuth()
   const { userId: urlUserId } = useParams()
+  const navigate = useNavigate()
   const userId = urlUserId || session?.user?.id
   const isOwner = session?.user?.id === userId
   const fileInputRef = useRef(null)
@@ -94,6 +96,16 @@ export default function ProfilePage() {
       console.error("Follow error:", err)
     } finally {
       setFollowingLoading(false)
+    }
+  }
+
+  const handleMessage = async () => {
+    if (!session?.user?.id || isOwner) return
+    try {
+      const cid = await getOrCreateConversation(session.user.id, userId)
+      navigate(`/messages/${cid}`)
+    } catch (err) {
+      alert("Failed to start conversation")
     }
   }
 
@@ -204,6 +216,12 @@ export default function ProfilePage() {
                 disabled={followingLoading}
               >
                 {followingLoading ? '...' : (isFollowing ? '✓ Following' : '+ Follow Crew')}
+              </button>
+            )}
+
+            {!isOwner && (
+              <button className="profile-share-btn" onClick={handleMessage}>
+                💬 Message
               </button>
             )}
             

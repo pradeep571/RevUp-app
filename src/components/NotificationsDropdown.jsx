@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 
-export default function NotificationsDropdown({ notifications, onMarkRead, onClose }) {
+export default function NotificationsDropdown({ notifications, onMarkRead, onMarkAllRead, onDelete, onClose }) {
   const navigate = useNavigate()
 
   const getNotificationText = (notif) => {
@@ -30,11 +30,20 @@ export default function NotificationsDropdown({ notifications, onMarkRead, onClo
     onClose()
   }
 
+  const handleDelete = (e, id) => {
+    e.stopPropagation()
+    onDelete(id)
+  }
+
   return (
     <div className="notif-dropdown">
       <div className="notif-header">
         <span>CREW ACTIVITY</span>
-        {notifications.length > 0 && <span className="notif-clear">Recent</span>}
+        {notifications.length > 0 && (
+          <span className="notif-clear" onClick={onMarkAllRead}>
+            Mark all
+          </span>
+        )}
       </div>
       
       <div className="notif-list">
@@ -56,6 +65,17 @@ export default function NotificationsDropdown({ notifications, onMarkRead, onClo
                   {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
+              
+              <div className="notif-actions-hover">
+                <button 
+                  className="notif-delete-btn" 
+                  onClick={(e) => handleDelete(e, n.id)}
+                  title="Remove notification"
+                >
+                  ✕
+                </button>
+              </div>
+
               {!n.is_read && <div className="notif-dot"></div>}
             </div>
           ))

@@ -11,6 +11,7 @@ import MarketplacePage from './pages/MarketplacePage'
 import EventsPage from './pages/EventsPage'
 import TrendingPage from './pages/TrendingPage'
 import ProfilePage from './pages/ProfilePage'
+import MessagingPage from './pages/MessagingPage'
 
 function AppRoutes() {
   const { session, loading } = useAuth()
@@ -29,6 +30,8 @@ function AppRoutes() {
           <Route path="/market" element={<MarketplacePage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/trending" element={<TrendingPage />} />
+          <Route path="/messages" element={<MessagingPage />} />
+          <Route path="/messages/:chatId" element={<MessagingPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />

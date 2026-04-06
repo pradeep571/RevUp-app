@@ -1,8 +1,30 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { getOrCreateConversation } from '../data/api'
 
 export default function ListingDetail({ listing, onClose }) {
+  const { session } = useAuth()
+  const navigate = useNavigate()
   const [wishlisted, setWishlisted] = useState(false)
   const [contacted, setContacted] = useState(false)
+
+  const handleMessageSeller = async () => {
+    if (!session?.user?.id) return
+    if (session.user.id === listing.seller.id) {
+      alert("You cannot message yourself!")
+      return
+    }
+    
+    try {
+      const cid = await getOrCreateConversation(session.user.id, listing.seller.id)
+      navigate(`/messages/${cid}`)
+      onClose()
+    } catch (err) {
+      console.error("Chat error:", err)
+      alert("Failed to start conversation with seller.")
+    }
+  }
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()}>
@@ -38,7 +60,7 @@ export default function ListingDetail({ listing, onClose }) {
             {listing.verified && <div className="lmodal-seller-badge">⭐ Verified</div>}
           </div>
           <div className="lmodal-actions">
-            <button className="lmodal-contact" onClick={() => setContacted(true)}>{contacted ? '✓ Request Sent!' : '📞 Contact Seller'}</button>
+            <button className="lmodal-contact" onClick={handleMessageSeller}>💬 Message Seller</button>
             <button className={wishlisted ? 'lmodal-wishlist wishlisted' : 'lmodal-wishlist'} onClick={() => setWishlisted(!wishlisted)}>{wishlisted ? '🔖 Saved' : '🔖 Save'}</button>
           </div>
         </div>

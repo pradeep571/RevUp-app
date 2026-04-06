@@ -67,6 +67,23 @@ export async function markAsRead(notificationId) {
   if (error) throw error
 }
 
+export async function markAllNotificationsAsRead(userId) {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('user_id', userId)
+    .eq('is_read', false)
+  if (error) throw error
+}
+
+export async function deleteNotification(notificationId) {
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('id', notificationId)
+  if (error) throw error
+}
+
 // ── Likes ───────────────────────────────────
 export async function fetchLikes(postId) {
   const { data } = await supabase
@@ -353,3 +370,68 @@ export async function injectDummyEvents(userId) {
   }
 }
 
+
+// ── Messaging ───────────────────────────────
+export async function fetchConversations(userId) {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('*, user_1_profile:profiles!user_1(username, full_name, id), user_2_profile:profiles!user_2(username, full_name, id)')
+    .or(`user_1.eq.${userId},user_2.eq.${userId}`)
+    .order('updated_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
+export async function fetchMessages(conversationId) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+  return data || []
+}
+
+export async function sendMessage({ conversation_id, sender_id, content }) {
+  const { data, error } = await supabase.from('messages').insert({
+    conversation_id,
+    sender_id,
+    content,
+    is_read: false
+  }).select().single()
+
+  if (error) throw error
+
+  // Update last_message in conversation
+  await supabase.from('conversations').update({
+    last_message: content,
+    updated_at: new Date().toISOString()
+  }).eq('id', conversation_id)
+
+  return data
+}
+
+export async function getOrCreateConversation(user1, user2) {
+  // Sort IDs to ensure consistency
+  const [u1, u2] = [user1, user2].sort()
+
+  const { data: existing } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('user_1', u1)
+    .eq('user_2', u2)
+    .maybeSingle()
+
+  if (existing) return existing.id
+
+  const { data: created, error } = await supabase
+    .from('conversations')
+    .insert({ user_1: u1, user_2: u2 })
+    .select()
+    .single()
+
+  if (error) throw error
+  return created.id
+}
