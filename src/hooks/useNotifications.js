@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'  // add useRef
 import { supabase } from '../supabase'
 import { fetchNotifications, markAsRead, markAllNotificationsAsRead, deleteNotification } from '../data/api'
 
@@ -6,6 +6,12 @@ export function useNotifications(userId, onNewNotif) {
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
+
+  // ✅ Keep callback ref always up-to-date without triggering re-renders
+  const onNewNotifRef = useRef(onNewNotif)
+  useEffect(() => {
+    onNewNotifRef.current = onNewNotif
+  }, [onNewNotif])
 
   useEffect(() => {
     if (!userId) {
@@ -15,14 +21,12 @@ export function useNotifications(userId, onNewNotif) {
 
     console.log("🏎️ useNotifications: Booting sync for", userId.slice(0, 8))
 
-    // 1. Load data
     fetchNotifications(userId).then(data => {
       setNotifications(data)
       setUnreadCount(data.filter(n => !n.is_read).length)
       setLoading(false)
     })
 
-    // 2. Realtime
     const channelName = `notifs-${userId.slice(0, 8)}`
     console.log(`🔌 [${channelName}] Attempting connection...`)
 
@@ -33,8 +37,7 @@ export function useNotifications(userId, onNewNotif) {
       }
     })
     
-    channel
-      .on(
+    channel.on(
         'postgres_changes',
         {
           event: 'INSERT',
@@ -55,36 +58,34 @@ export function useNotifications(userId, onNewNotif) {
             setNotifications(prev => [enriched, ...prev].slice(0, 20))
             setUnreadCount(prev => prev + 1)
 
-            // Trigger Toast if callback provided
-            if (onNewNotif) onNewNotif(enriched)
+            // ✅ Always calls the latest version of the callback
+            if (onNewNotifRef.current) onNewNotifRef.current(enriched)
           } catch (e) {
             console.error("Enrich error:", e)
           }
         }
       )
-    let lastStatus = null
 
+    let lastStatus = null
     channel.subscribe((status, err) => {
-        if (err) console.error(`❌ [${channelName}] Error:`, err)
-        
-        if (status !== lastStatus) {
-          console.log(`📡 [${channelName}] Status:`, status)
-          lastStatus = status
-        }
-        
-        if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
-          console.warn(`⚠️ [${channelName}] Connection issue (${status}). Retrying...`)
-          setTimeout(() => {
-            if (channel) channel.subscribe()
-          }, 3000)
-        }
-      })
+      if (err) console.error(`❌ [${channelName}] Error:`, err)
+      if (status !== lastStatus) {
+        console.log(`📡 [${channelName}] Status:`, status)
+        lastStatus = status
+      }
+      if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+        console.warn(`⚠️ [${channelName}] Connection issue (${status}). Retrying...`)
+        setTimeout(() => {
+          if (channel) channel.subscribe()
+        }, 3000)
+      }
+    })
 
     return () => {
       console.log(`🔌 [${channelName}] Cleaning up...`)
       supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId]) 
 
   const handleMarkRead = async (id) => {
     try {
