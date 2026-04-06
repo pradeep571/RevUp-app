@@ -1,7 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 export default function Toast({ notification, onClose }) {
   const [isExiting, setIsExiting] = useState(false)
+
+  const handleClose = useCallback(() => {
+    setIsExiting(true)
+    setTimeout(() => onClose(), 300)
+  }, [onClose])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -9,12 +14,7 @@ export default function Toast({ notification, onClose }) {
     }, 5000)
 
     return () => clearTimeout(timer)
-  }, [])
-
-  const handleClose = () => {
-    setIsExiting(true)
-    setTimeout(() => onClose(), 300)
-  }
+  }, [handleClose])
 
   if (!notification) return null
 

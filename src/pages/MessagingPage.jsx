@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { fetchConversations, getOrCreateConversation } from '../data/api'
+import { fetchAllProfiles, fetchConversations, getOrCreateConversation, markConversationAsRead } from '../data/api'
 import { useChat } from '../hooks/useChat'
+import { supabase } from '../supabase'
 
 export default function MessagingPage() {
   const { session } = useAuth()
@@ -13,6 +14,12 @@ export default function MessagingPage() {
   const [conversations, setConversations] = useState([])
   const [convLoading, setConvLoading] = useState(true)
   const [newMessage, setNewMessage] = useState('')
+
+  // New chat modal state
+  const [showNewChat, setShowNewChat] = useState(false)
+  const [profileQuery, setProfileQuery] = useState('')
+  const [profiles, setProfiles] = useState([])
+  const [profilesLoading, setProfilesLoading] = useState(false)
 
   const userId = session?.user?.id
   const { messages, loading: chatLoading, sendMessage } = useChat(chatId, userId)
@@ -26,10 +33,111 @@ export default function MessagingPage() {
     })
   }, [userId, chatId])
 
+  // Mark conversation as read when opening a thread
+  useEffect(() => {
+    if (!userId || !chatId) return
+    markConversationAsRead(chatId)
+      .then(() => {
+        // Optimistic UI update
+        setConversations(prev =>
+          prev.map(c => (c.id === chatId ? { ...c, is_read: true } : c))
+        )
+      })
+      .catch(() => {
+        // Keep UI as-is; realtime will eventually reconcile.
+      })
+  }, [chatId, userId])
+
+  // Realtime updates for conversations unread status (cross-tab)
+  useEffect(() => {
+    if (!userId) return
+
+    let debounceTimer = null
+    const scheduleReload = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        fetchConversations(userId).then(data => setConversations(data || []))
+      }, 250)
+    }
+
+    const channelName = `conversations-${userId.slice(0, 8)}`
+    let lastStatus = null
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'conversations' },
+        scheduleReload
+      )
+      .subscribe((status, err) => {
+        if (err) console.error(`[${channelName}] realtime error`, err)
+        if (status !== lastStatus) {
+          console.log(`[${channelName}] realtime status`, status)
+          lastStatus = status
+        }
+        if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+          setTimeout(() => {
+            channel.subscribe()
+          }, 1500)
+        }
+      })
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+
   // 2. Scroll to bottom on new messages
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Load profiles for the "New message" picker.
+  useEffect(() => {
+    if (!showNewChat || !userId) return
+
+    let isMounted = true
+
+    async function loadProfiles() {
+      try {
+        setProfilesLoading(true)
+        const data = await fetchAllProfiles()
+        if (!isMounted) return
+        setProfiles(data || [])
+      } catch {
+        // Keep UI simple; errors can be surfaced via a toast later.
+      } finally {
+        if (isMounted) setProfilesLoading(false)
+      }
+    }
+
+    loadProfiles()
+
+    return () => {
+      isMounted = false
+    }
+  }, [showNewChat, userId])
+
+  const filteredProfiles = profiles.filter(p => {
+    const q = profileQuery.trim().toLowerCase()
+    if (!q) return true
+    const name = (p.full_name || '').toLowerCase()
+    const username = (p.username || '').toLowerCase()
+    return name.includes(q) || username.includes(q)
+  })
+
+  const startChatWith = async (targetUserId) => {
+    if (!userId || !targetUserId || targetUserId === userId) return
+    try {
+      const cid = await getOrCreateConversation(userId, targetUserId)
+      setShowNewChat(false)
+      setProfileQuery('')
+      navigate(`/messages/${cid}`)
+    } catch {
+      alert('Failed to start conversation')
+    }
+  }
 
   const handleSendMessage = async (e) => {
     e.preventDefault()
@@ -37,7 +145,7 @@ export default function MessagingPage() {
     try {
       await sendMessage(newMessage)
       setNewMessage('')
-    } catch (err) {
+    } catch {
       alert("Failed to send message")
     }
   }
@@ -47,13 +155,22 @@ export default function MessagingPage() {
   }
 
   return (
-    <div className="app-layout" style={{ height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
+    <div className="app-layout messaging-layout">
       <div className="messaging-container">
         
         {/* Sidebar: Conversations */}
         <div className="inbox-sidebar">
           <div className="inbox-header">
-            <h3>DRIVERS BOX</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+              <h3 style={{ margin: 0 }}>DRIVERS BOX</h3>
+              <button
+                className="event-join-btn"
+                style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: 11 }}
+                onClick={() => setShowNewChat(true)}
+              >
+                + New
+              </button>
+            </div>
           </div>
           <div className="conv-list">
             {convLoading ? (
@@ -141,11 +258,107 @@ export default function MessagingPage() {
               <div className="chat-placeholder-icon">💬</div>
               <h2>SELECT A DRIVER</h2>
               <p>Your inbox is ready for the next heat. Pickup a conversation or start a new one from a driver's profile.</p>
+              <button
+                className="event-join-btn"
+                style={{ marginTop: 18, padding: '10px 18px' }}
+                onClick={() => setShowNewChat(true)}
+              >
+                + Start New Message
+              </button>
             </div>
           )}
         </div>
 
       </div>
+
+      {showNewChat && (
+        <div className="modal-overlay" onClick={() => setShowNewChat(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 420 }}
+          >
+            <div className="modal-header">
+              <h2 className="modal-title">New Message</h2>
+              <button className="modal-close" onClick={() => setShowNewChat(false)}>✕</button>
+            </div>
+
+            <div style={{ padding: 16 }}>
+              <input
+                value={profileQuery}
+                onChange={(e) => setProfileQuery(e.target.value)}
+                placeholder="Search drivers..."
+                style={{
+                  width: '100%',
+                  background: 'var(--bg3)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
+                  padding: '10px 12px',
+                  color: 'var(--text)',
+                  outline: 'none',
+                  fontFamily: 'Inter, sans-serif'
+                }}
+              />
+
+              <div style={{ marginTop: 12, maxHeight: 360, overflowY: 'auto' }}>
+                {profilesLoading ? (
+                  <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>
+                    Loading racers...
+                  </div>
+                ) : filteredProfiles.length === 0 ? (
+                  <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>
+                    No racers found.
+                  </div>
+                ) : (
+                  filteredProfiles
+                    .filter(p => p.id !== userId)
+                    .map(p => (
+                      <div
+                        key={p.id}
+                        className="user-list-item"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                          padding: '12px 16px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid var(--border)'
+                        }}
+                        onClick={() => startChatWith(p.id)}
+                      >
+                        <div
+                          className="post-avatar"
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 999,
+                            background: 'linear-gradient(135deg, var(--gold), var(--red))',
+                            color: '#000',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}
+                        >
+                          {(p.full_name || p.username || '?')[0]?.toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.full_name || 'Unknown Driver'}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            @{p.username || 'racer'}
+                          </div>
+                        </div>
+                        <div style={{ color: 'var(--gold)', fontSize: 18 }}>›</div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

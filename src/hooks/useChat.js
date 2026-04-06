@@ -8,13 +8,19 @@ export function useChat(conversationId, userId) {
 
   useEffect(() => {
     if (!conversationId) return
+    let isMounted = true
 
     // 1. Initial Load
-    setLoading(true)
-    fetchMessages(conversationId).then(data => {
-      setMessages(data)
-      setLoading(false)
-    })
+    async function loadInitialMessages() {
+      setLoading(true)
+      try {
+        const data = await fetchMessages(conversationId)
+        if (isMounted) setMessages(data)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+    loadInitialMessages()
 
     // 2. Real-time Subscription
     const channel = supabase
@@ -38,6 +44,7 @@ export function useChat(conversationId, userId) {
       .subscribe()
 
     return () => {
+      isMounted = false
       supabase.removeChannel(channel)
     }
   }, [conversationId])

@@ -104,7 +104,7 @@ export default function ProfilePage() {
     try {
       const cid = await getOrCreateConversation(session.user.id, userId)
       navigate(`/messages/${cid}`)
-    } catch (err) {
+    } catch {
       alert("Failed to start conversation")
     }
   }
@@ -135,10 +135,6 @@ export default function ProfilePage() {
 
   // Calculate stats
   const carCount = cars.length
-  const postCount = posts.length
-  const hpSum = cars.reduce((acc, c) => acc + (parseInt(c.hp) || 0), 0)
-  const totalLikes = posts.reduce((acc, p) => acc + (p.likes_count || 0), 0)
-
   const avatarText = profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : '?'
 
   const handleShare = () => {

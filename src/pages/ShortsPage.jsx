@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { fetchShorts, injectDummyShorts } from '../data/api'
 import ShortItem from '../components/ShortItem'
@@ -10,7 +10,7 @@ export default function ShortsPage() {
   const [loading, setLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
 
-  async function loadShorts() {
+  const loadShorts = useCallback(async () => {
     if (!session?.user?.id) return
     try {
       let data = await fetchShorts()
@@ -27,11 +27,11 @@ export default function ShortsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [session?.user?.id])
 
   useEffect(() => {
     loadShorts()
-  }, [session?.user?.id])
+  }, [loadShorts])
 
   if (loading) return <div className="feed-col" style={{ alignItems: 'center', paddingTop: '40px' }}>Loading Shorts... 📹</div>
 

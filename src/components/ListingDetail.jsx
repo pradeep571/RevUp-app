@@ -7,7 +7,6 @@ export default function ListingDetail({ listing, onClose }) {
   const { session } = useAuth()
   const navigate = useNavigate()
   const [wishlisted, setWishlisted] = useState(false)
-  const [contacted, setContacted] = useState(false)
 
   const handleMessageSeller = async () => {
     if (!session?.user?.id) return

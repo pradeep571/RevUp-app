@@ -435,3 +435,13 @@ export async function getOrCreateConversation(user1, user2) {
   if (error) throw error
   return created.id
 }
+
+// ── Conversations ────────────────────────────────
+export async function markConversationAsRead(conversationId) {
+  const { error } = await supabase
+    .from('conversations')
+    .update({ is_read: true })
+    .eq('id', conversationId)
+
+  if (error) throw error
+}

@@ -2937,6 +2937,17 @@ body {
 }
 
 /* ── Messaging System (Premium Upgrade) ──────────────────────── */
+.messaging-layout {
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+@media (max-width: 700px) {
+  .messaging-layout {
+    height: calc(100vh - 60px - 70px - env(safe-area-inset-bottom));
+  }
+}
+
 .messaging-container {
   display: flex;
   height: 100%;
@@ -3271,8 +3282,10 @@ body {
     position: fixed;
     top: 60px;
     left: 0;
+    right: 0;
     width: 100%;
-    height: calc(100vh - 60px);
+    bottom: calc(70px + env(safe-area-inset-bottom));
+    height: auto;
     z-index: 1000;
   }
 

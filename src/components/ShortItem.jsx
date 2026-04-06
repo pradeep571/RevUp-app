@@ -9,13 +9,14 @@ export default function ShortItem({ short }) {
 
   // Use Intersection Observer to auto-play/pause videos based on visibility in the snap container
   useEffect(() => {
+    const videoEl = videoRef.current
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            videoRef.current?.play().then(() => setIsPlaying(true)).catch(() => {})
+            videoEl?.play().then(() => setIsPlaying(true)).catch(() => {})
           } else {
-            videoRef.current?.pause()
+            videoEl?.pause()
             setIsPlaying(false)
           }
         })
@@ -23,12 +24,12 @@ export default function ShortItem({ short }) {
       { threshold: 0.6 } // Video plays when it's at least 60% visible
     )
 
-    if (videoRef.current) {
-      observer.observe(videoRef.current)
+    if (videoEl) {
+      observer.observe(videoEl)
     }
 
     return () => {
-      if (videoRef.current) observer.unobserve(videoRef.current)
+      if (videoEl) observer.unobserve(videoEl)
     }
   }, [])
 
@@ -50,7 +51,9 @@ export default function ShortItem({ short }) {
     setLikes(prev => prev + 1)
     try {
       await likeShort(short.id, likes)
-    } catch (_) { /* ignore */ }
+    } catch (err) {
+      console.error('Short like failed:', err)
+    }
   }
 
   return (

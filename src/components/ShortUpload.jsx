@@ -56,7 +56,7 @@ export default function ShortUpload({ onClose, onUploaded }) {
       })
       onUploaded()
       onClose()
-    } catch(err) {
+    } catch {
       setError("Failed to save short to database.")
       setUploading(false)
     }

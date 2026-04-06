@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../supabase'
 import { 
   fetchLikes, addLike, removeLike, 
   fetchCommentCount, fetchComments, 
@@ -30,6 +31,17 @@ export default function PostCard({ post, onDelete }) {
   const [authorName, setAuthorName] = useState('')
 
   const isOwner = session.user.id === post.user_id
+
+  const showCommentsRef = useRef(showComments)
+  const userIdRef = useRef(session?.user?.id)
+
+  useEffect(() => {
+    showCommentsRef.current = showComments
+  }, [showComments])
+
+  useEffect(() => {
+    userIdRef.current = session?.user?.id
+  }, [session?.user?.id])
 
   // ── Fetch author name & following status ──
   useEffect(() => {
@@ -74,15 +86,115 @@ export default function PostCard({ post, onDelete }) {
   }, [post.id])
 
   // ── Fetch full comments when section is opened ──
-  useEffect(() => {
-    if (showComments) loadComments()
-  }, [showComments])
-
-  async function loadComments() {
+  const loadComments = useCallback(async () => {
     const data = await fetchComments(post.id)
     setComments(data)
     setCommentCount(data.length)
-  }
+  }, [post.id])
+
+  useEffect(() => {
+    if (showComments) loadComments()
+  }, [showComments, loadComments])
+
+  // Realtime updates for like/comment counters.
+  useEffect(() => {
+    if (!post?.id) return
+
+    let cancelled = false
+    let likeDebounce = null
+    let commentDebounce = null
+
+    async function reloadLikes() {
+      try {
+        const data = await fetchLikes(post.id)
+        if (cancelled) return
+        setLikeCount(data.length)
+        const currentUserId = userIdRef.current
+        setLiked(data.some(l => l.user_id === currentUserId))
+      } catch (err) {
+        // Non-blocking: keep previous UI.
+        console.error('Failed to reload likes:', err)
+      }
+    }
+
+    async function reloadCommentsModel() {
+      try {
+        if (showCommentsRef.current) {
+          await loadComments()
+          return
+        }
+        const count = await fetchCommentCount(post.id)
+        if (cancelled) return
+        setCommentCount(count)
+      } catch (err) {
+        console.error('Failed to reload comments:', err)
+      }
+    }
+
+    const scheduleLikesReload = () => {
+      if (likeDebounce) clearTimeout(likeDebounce)
+      likeDebounce = setTimeout(() => {
+        if (!cancelled) reloadLikes()
+      }, 200)
+    }
+
+    const scheduleCommentsReload = () => {
+      if (commentDebounce) clearTimeout(commentDebounce)
+      commentDebounce = setTimeout(() => {
+        if (!cancelled) reloadCommentsModel()
+      }, 200)
+    }
+
+    const likeChannel = supabase
+      .channel(`likes-${post.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'likes', filter: `post_id=eq.${post.id}` },
+        scheduleLikesReload
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'likes', filter: `post_id=eq.${post.id}` },
+        scheduleLikesReload
+      )
+      .subscribe((status, err) => {
+        if (err) console.error(`[likes-${post.id}] realtime error`, err)
+        if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+          setTimeout(() => {
+            likeChannel.subscribe()
+          }, 1500)
+        }
+      })
+
+    const commentChannel = supabase
+      .channel(`comments-${post.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'comments', filter: `post_id=eq.${post.id}` },
+        scheduleCommentsReload
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'comments', filter: `post_id=eq.${post.id}` },
+        scheduleCommentsReload
+      )
+      .subscribe((status, err) => {
+        if (err) console.error(`[comments-${post.id}] realtime error`, err)
+        if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+          setTimeout(() => {
+            commentChannel.subscribe()
+          }, 1500)
+        }
+      })
+
+    return () => {
+      cancelled = true
+      if (likeDebounce) clearTimeout(likeDebounce)
+      if (commentDebounce) clearTimeout(commentDebounce)
+      supabase.removeChannel(likeChannel)
+      supabase.removeChannel(commentChannel)
+    }
+  }, [post.id, loadComments])
 
   // ── Toggle like ──
   async function handleLike() {
@@ -105,7 +217,9 @@ export default function PostCard({ post, onDelete }) {
       await addComment(post.id, session.user.id, commentText.trim())
       setCommentText('')
       loadComments()
-    } catch (_) { /* ignore */ }
+    } catch (err) {
+      console.error('Comment error:', err)
+    }
     setCommentLoading(false)
   }
 

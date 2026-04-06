@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { fetchPosts, fetchAllProfiles, fetchFollowing } from '../data/api'
 import { CHIPS } from '../data/constants'
 import PostCard from '../components/PostCard'
 import CreatePostModal from '../components/CreatePostModal'
+import { supabase } from '../supabase'
 
 export default function FeedPage() {
   const { session } = useAuth()
   const navigate = useNavigate()
+  const userId = session?.user?.id
   
   const [showCreate, setShowCreate] = useState(false)
   const [realPosts, setRealPosts] = useState([])
@@ -19,21 +21,24 @@ export default function FeedPage() {
   const [discoveryUsers, setDiscoveryUsers] = useState([])
   const [filterUserId, setFilterUserId] = useState(null)
 
-  async function loadData() {
-    if (!session?.user?.id) return
-    setLoading(true)
+  const isMountedRef = useRef(false)
+
+  const loadData = useCallback(async () => {
+    if (!userId) return
+    if (isMountedRef.current) setLoading(true)
     try {
       const [postsData, allProfiles, followingIds] = await Promise.all([
         fetchPosts(),
         fetchAllProfiles(),
-        fetchFollowing(session.user.id)
+        fetchFollowing(userId)
       ])
-      
+
+      if (!isMountedRef.current) return
       setRealPosts(postsData || [])
-      
+
       // Process Discovery Bar
-      const otherProfiles = allProfiles.filter(p => p.id !== session.user.id)
-      
+      const otherProfiles = allProfiles.filter(p => p.id !== userId)
+
       const processed = otherProfiles.map(p => {
         const isFollowing = followingIds.includes(p.id)
         const hasPosts = postsData.some(post => post.user_id === p.id)
@@ -50,11 +55,73 @@ export default function FeedPage() {
       setDiscoveryUsers(sorted)
     } catch (err) {
       console.error("Failed to load feed", err)
+    } finally {
+      if (isMountedRef.current) setLoading(false)
     }
-    setLoading(false)
-  }
+  }, [userId])
 
-  useEffect(() => { loadData() }, [session?.user?.id])
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Initial load
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Realtime: reload the feed when posts change.
+  // Note: discovery bar depends on posts too, so we refresh the full feed model.
+  useEffect(() => {
+    if (!userId) return
+
+    let debounceTimer = null
+    const scheduleReload = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        loadData()
+      }, 250)
+    }
+
+    const channelName = `feed-posts-${userId.slice(0, 8)}`
+    let lastStatus = null
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        scheduleReload
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        scheduleReload
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'posts' },
+        scheduleReload
+      )
+      .subscribe((status, err) => {
+        if (err) console.error(`[${channelName}] realtime error`, err)
+        if (status !== lastStatus) {
+          console.log(`[${channelName}] realtime status`, status)
+          lastStatus = status
+        }
+        if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+          setTimeout(() => {
+            channel.subscribe()
+          }, 1500)
+        }
+      })
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      supabase.removeChannel(channel)
+    }
+  }, [userId, loadData])
 
   function handleDelete(id) {
     setRealPosts(prev => prev.filter(p => p.id !== id))
