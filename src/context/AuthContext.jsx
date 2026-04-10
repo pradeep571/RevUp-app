@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from '../supabase'
-import { fetchProfile } from '../data/api'
+import { supabase } from '../services/supabase'
+import { fetchProfile } from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -34,8 +34,14 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }
 
+  const isAdmin = Boolean(
+    session?.user?.email && 
+    import.meta.env.VITE_ADMIN_EMAIL &&
+    import.meta.env.VITE_ADMIN_EMAIL.split(',').includes(session.user.email)
+  )
+
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, logout }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, isAdmin, loading, logout }}>
       {children}
     </AuthContext.Provider>
   )

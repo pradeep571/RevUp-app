@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { getOrCreateConversation } from '../data/api'
+import { useAuth } from '../../context/AuthContext'
+import { getOrCreateConversation } from '../../services/api'
 
 export default function ListingDetail({ listing, onClose }) {
   const { session } = useAuth()

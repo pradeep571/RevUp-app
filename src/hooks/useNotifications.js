@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'  // add useRef
-import { supabase } from '../supabase'
-import { fetchNotifications, markAsRead, markAllNotificationsAsRead, deleteNotification } from '../data/api'
+import { supabase } from '../services/supabase'
+import { fetchNotifications, markAsRead, markAllNotificationsAsRead, deleteNotification } from '../services/api'
 
 export function useNotifications(userId, onNewNotif) {
   const [notifications, setNotifications] = useState([])

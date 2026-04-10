@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { useNotifications } from '../hooks/useNotifications'
-import NotificationsDropdown from './NotificationsDropdown'
+import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../hooks/useNotifications'
+import NotificationsDropdown from '../notifications/NotificationsDropdown'
 import Toast from './Toast'
 
 export default function Navbar() {
-  const { session, profile } = useAuth()
+  const { session, profile, isAdmin } = useAuth()
   const [activeToast, setActiveToast] = useState(null)
   
   const { notifications, unreadCount, handleMarkRead, markAllAsRead, handleDelete } = useNotifications(
@@ -53,7 +53,11 @@ export default function Navbar() {
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
-          
+          {isAdmin && (
+            <Link to="/admin" style={{ textDecoration: 'none', color: 'var(--muted)', fontSize: '12px', fontWeight: 'bold' }}>
+              ADMIN
+            </Link>
+          )}
           <div className="notif-wrapper" ref={notifRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <div className="notif-bell-container" onClick={() => setShowNotifs(!showNotifs)}>
               <button className="notif-bell-btn">

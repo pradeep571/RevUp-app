@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { fetchAllProfiles, fetchConversations, getOrCreateConversation, markConversationAsRead } from '../data/api'
+import { fetchAllProfiles, fetchConversations, getOrCreateConversation, markConversationAsRead } from '../services/api'
 import { useChat } from '../hooks/useChat'
-import { supabase } from '../supabase'
+import { supabase } from '../services/supabase'
 
 export default function MessagingPage() {
   const { session } = useAuth()
@@ -38,7 +38,6 @@ export default function MessagingPage() {
     if (!userId || !chatId) return
     markConversationAsRead(chatId)
       .then(() => {
-        // Optimistic UI update
         setConversations(prev =>
           prev.map(c => (c.id === chatId ? { ...c, is_read: true } : c))
         )
@@ -76,9 +75,7 @@ export default function MessagingPage() {
           lastStatus = status
         }
         if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
-          setTimeout(() => {
-            channel.subscribe()
-          }, 1500)
+          setTimeout(() => { channel.subscribe() }, 1500)
         }
       })
 
@@ -93,7 +90,7 @@ export default function MessagingPage() {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Load profiles for the "New message" picker.
+  // Load profiles for the "New message" picker
   useEffect(() => {
     if (!showNewChat || !userId) return
 
@@ -114,9 +111,7 @@ export default function MessagingPage() {
 
     loadProfiles()
 
-    return () => {
-      isMounted = false
-    }
+    return () => { isMounted = false }
   }, [showNewChat, userId])
 
   const filteredProfiles = profiles.filter(p => {
@@ -146,7 +141,7 @@ export default function MessagingPage() {
       await sendMessage(newMessage)
       setNewMessage('')
     } catch {
-      alert("Failed to send message")
+      alert('Failed to send message')
     }
   }
 
@@ -157,7 +152,7 @@ export default function MessagingPage() {
   return (
     <div className="app-layout messaging-layout">
       <div className="messaging-container">
-        
+
         {/* Sidebar: Conversations */}
         <div className="inbox-sidebar">
           <div className="inbox-header">
@@ -182,8 +177,8 @@ export default function MessagingPage() {
                 const other = getOtherUser(c)
                 const isActive = chatId === c.id
                 return (
-                  <div 
-                    key={c.id} 
+                  <div
+                    key={c.id}
                     className={`conv-item ${isActive ? 'active' : ''}`}
                     onClick={() => navigate(`/messages/${c.id}`)}
                   >
@@ -209,8 +204,8 @@ export default function MessagingPage() {
               <div className="chat-header">
                 <div className="chat-user-info">
                   <div className="chat-user-name">
-                    {conversations.find(c => c.id === chatId) 
-                      ? getOtherUser(conversations.find(c => c.id === chatId))?.full_name 
+                    {conversations.find(c => c.id === chatId)
+                      ? getOtherUser(conversations.find(c => c.id === chatId))?.full_name
                       : 'Chatting with Driver'}
                   </div>
                   <div className="chat-user-status">Online now</div>
@@ -245,8 +240,8 @@ export default function MessagingPage() {
               </div>
 
               <form className="chat-input-area" onSubmit={handleSendMessage}>
-                <input 
-                  placeholder="Draft your race talk..." 
+                <input
+                  placeholder="Draft your race talk..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                 />
@@ -257,7 +252,7 @@ export default function MessagingPage() {
             <div className="chat-placeholder">
               <div className="chat-placeholder-icon">💬</div>
               <h2>SELECT A DRIVER</h2>
-              <p>Your inbox is ready for the next heat. Pickup a conversation or start a new one from a driver's profile.</p>
+              <p>Your inbox is ready for the next heat. Pick a conversation or start a new one from a driver's profile.</p>
               <button
                 className="event-join-btn"
                 style={{ marginTop: 18, padding: '10px 18px' }}
@@ -271,16 +266,17 @@ export default function MessagingPage() {
 
       </div>
 
+      {/* New Message Modal */}
       {showNewChat && (
-        <div className="modal-overlay" onClick={() => setShowNewChat(false)}>
+        <div className="modal-backdrop" onClick={() => setShowNewChat(false)}>
           <div
-            className="modal-content"
+            className="modal-box"
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: 420 }}
           >
-            <div className="modal-header">
-              <h2 className="modal-title">New Message</h2>
-              <button className="modal-close" onClick={() => setShowNewChat(false)}>✕</button>
+            <div className="form-header">
+              <div className="form-title">New Message</div>
+              <button className="modal-close-btn" onClick={() => setShowNewChat(false)}>✕</button>
             </div>
 
             <div style={{ padding: 16 }}>
@@ -296,7 +292,8 @@ export default function MessagingPage() {
                   padding: '10px 12px',
                   color: 'var(--text)',
                   outline: 'none',
-                  fontFamily: 'Inter, sans-serif'
+                  fontFamily: 'Inter, sans-serif',
+                  boxSizing: 'border-box'
                 }}
               />
 
@@ -305,7 +302,7 @@ export default function MessagingPage() {
                   <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>
                     Loading racers...
                   </div>
-                ) : filteredProfiles.length === 0 ? (
+                ) : filteredProfiles.filter(p => p.id !== userId).length === 0 ? (
                   <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>
                     No racers found.
                   </div>
@@ -315,7 +312,6 @@ export default function MessagingPage() {
                     .map(p => (
                       <div
                         key={p.id}
-                        className="user-list-item"
                         style={{
                           display: 'flex',
                           alignItems: 'center',

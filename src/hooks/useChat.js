@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../supabase'
-import { fetchMessages, sendMessage as apiSendMessage } from '../data/api'
+import { supabase } from '../services/supabase'
+import { fetchMessages, sendMessage as apiSendMessage } from '../services/api'
 
 export function useChat(conversationId, userId) {
   const [messages, setMessages] = useState([])

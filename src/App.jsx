@@ -1,9 +1,9 @@
-import {  BrowserRouter , Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import './App.css'
+import './styles/App.css'
 
-import Navbar from './components/Navbar'
-import LoadingScreen from './components/LoadingScreen'
+import Navbar from './components/common/Navbar'
+import LoadingScreen from './components/common/LoadingScreen'
 import AuthPage from './pages/AuthPage'
 import FeedPage from './pages/FeedPage'
 import GaragePage from './pages/GaragePage'
@@ -12,6 +12,13 @@ import EventsPage from './pages/EventsPage'
 import TrendingPage from './pages/TrendingPage'
 import ProfilePage from './pages/ProfilePage'
 import MessagingPage from './pages/MessagingPage'
+import AdminPage from './pages/AdminPage'
+function AdminRoute() {
+  const { isAdmin, loading } = useAuth()
+  if (loading) return <LoadingScreen />
+  if (!isAdmin) return <Navigate to="/feed" replace />
+  return <Outlet />
+}
 
 function AppRoutes() {
   const { session, loading } = useAuth()
@@ -34,6 +41,9 @@ function AppRoutes() {
           <Route path="/messages/:chatId" element={<MessagingPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Routes>
       </main>

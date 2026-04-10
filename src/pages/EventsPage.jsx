@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { EVENT_FILTERS } from '../data/constants'
-import { fetchEvents, fetchEventAttendees, injectDummyEvents } from '../data/api'
-import EventCard from '../components/EventCard'
-import EventDetail from '../components/EventDetail'
+import { EVENT_FILTERS } from '../services/constants'
+import { fetchEvents, fetchEventAttendees, injectDummyEvents } from '../services/api'
+import EventCard from '../components/events/EventCard'
+import EventDetail from '../components/events/EventDetail'
 
 export default function EventsPage() {
   const { session } = useAuth()

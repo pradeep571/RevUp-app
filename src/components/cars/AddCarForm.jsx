@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { addCar } from '../data/api'
+import { useAuth } from '../../context/AuthContext'
+import { addCar } from '../../services/api'
 import ImageUpload from './ImageUpload'
 
 export default function AddCarForm({ onAdd, onClose }) {

@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { INITIAL_LISTINGS, MARKET_FILTERS, SORT_OPTIONS } from '../data/constants'
-import ListingCard from '../components/ListingCard'
-import ListingDetail from '../components/ListingDetail'
-import SellForm from '../components/SellForm'
+import { INITIAL_LISTINGS, MARKET_FILTERS, SORT_OPTIONS } from '../services/constants'
+import ListingCard from '../components/marketplace/ListingCard'
+import ListingDetail from '../components/marketplace/ListingDetail'
+import SellForm from '../components/marketplace/SellForm'
 
 export default function MarketplacePage() {
   const [listings, setListings] = useState(INITIAL_LISTINGS)

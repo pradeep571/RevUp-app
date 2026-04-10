@@ -1,0 +1,122 @@
+.award-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid;
+  min-width: 180px;
+  cursor: default;
+  transition: transform 0.15s;
+}
+.award-badge:hover { transform: translateY(-2px); }
+.badge-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.badge-text { display: flex; flex-direction: column; }
+.badge-name { font-size: 13px; font-weight: 500; }
+.badge-sub { font-size: 11px; }
+
+/* Small Pill Styles */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.bp-icon { font-size: 11px; }
+.bp-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 1px;
+}
+
+/* Individual - amber/orange tone */
+.b1 { background: #FAEEDA; border-color: #EF9F27; color: #633806; }
+.b1.badge-pill { background: rgba(239, 159, 39, 0.15); border-color: #EF9F27; color: #EF9F27; }
+.b1 .badge-icon { background: #EF9F27; }
+.b1 .badge-name { color: #633806; }
+.b1 .badge-sub { color: #854F0B; }
+
+.b2 { background: #FAC775; border-color: #BA7517; color: #412402; }
+.b2.badge-pill { background: rgba(240, 199, 117, 0.15); border-color: #FAC775; color: #FAC775; }
+.b2 .badge-icon { background: #BA7517; }
+.b2 .badge-name { color: #412402; }
+.b2 .badge-sub { color: #633806; }
+
+.b3 { background: #F0997B; border-color: #993C1D; color: #4A1B0C; }
+.b3.badge-pill { background: rgba(240, 153, 123, 0.15); border-color: #F0997B; color: #F0997B; }
+.b3 .badge-icon { background: #993C1D; }
+.b3 .badge-name { color: #4A1B0C; }
+.b3 .badge-sub { color: #712B13; }
+
+.b4 { background: linear-gradient(135deg, #2C2C2A 0%, #3C3489 100%); border-color: #7F77DD; color: #EEEDFE; }
+.b4.badge-pill { background: rgba(38, 33, 92, 0.3); border-color: #7F77DD; color: #EEEDFE; }
+.b4 .badge-icon { background: #7F77DD; }
+.b4 .badge-name { color: #EEEDFE; }
+.b4 .badge-sub { color: #AFA9EC; }
+
+/* City - teal/green tone */
+.c1 { background: #E1F5EE; border-color: #1D9E75; color: #04342C; }
+.c1.badge-pill { background: rgba(29, 158, 117, 0.15); border-color: #1D9E75; color: #1D9E75; }
+.c1 .badge-icon { background: #1D9E75; }
+.c1 .badge-name { color: #04342C; }
+.c1 .badge-sub { color: #0F6E56; }
+
+.c2 { background: #9FE1CB; border-color: #0F6E56; color: #04342C; }
+.c2.badge-pill { background: rgba(159, 225, 203, 0.15); border-color: #9FE1CB; color: #9FE1CB; }
+.c2 .badge-icon { background: #0F6E56; }
+.c2 .badge-name { color: #04342C; }
+.c2 .badge-sub { color: #085041; }
+
+.c3 { background: #5DCAA5; border-color: #085041; color: #04342C; }
+.c3.badge-pill { background: rgba(93, 202, 165, 0.15); border-color: #5DCAA5; color: #5DCAA5; }
+.c3 .badge-icon { background: #085041; }
+.c3 .badge-name { color: #04342C; }
+.c3 .badge-sub { color: #085041; }
+
+.c4 { background: linear-gradient(135deg, #04342C 0%, #085041 100%); border-color: #1D9E75; color: #E1F5EE; }
+.c4.badge-pill { background: rgba(4, 52, 44, 0.3); border-color: #1D9E75; color: #E1F5EE; }
+.c4 .badge-icon { background: #1D9E75; }
+.c4 .badge-name { color: #E1F5EE; }
+.c4 .badge-sub { color: #9FE1CB; }
+
+/* Special titles */
+.title-card {
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+  border: 1.5px solid;
+}
+.title-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.title-name { font-size: 15px; font-weight: 500; font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.5px; }
+.title-desc { font-size: 12px; margin-top: 2px; }
+
+.t-gold { background: linear-gradient(135deg, #412402, #854F0B); border-color: #EF9F27; }
+.t-gold .title-icon { background: #EF9F27; }
+.t-gold .title-name { color: #FAEEDA; }
+.t-gold .title-desc { color: #FAC775; }
+
+.t-city { background: linear-gradient(135deg, #04342C, #0F6E56); border-color: #1D9E75; }
+.t-city .title-icon { background: #1D9E75; }
+.t-city .title-name { color: #E1F5EE; }
+.t-city .title-desc { color: #9FE1CB; }

@@ -1,4 +1,13 @@
+import { useEffect, useState } from 'react'
+import { fetchCarBadges } from '../../services/api'
+import Badge from '../common/Badge'
+
 export default function CarCard({ car, onSelect }) {
+  const [badges, setBadges] = useState([])
+  useEffect(() => {
+    if (car.id) fetchCarBadges(car.id).then(setBadges)
+  }, [car.id])
+
   return (
     <div className="car-card" onClick={() => onSelect(car)}>
       {car.image_url ? (
@@ -13,6 +22,11 @@ export default function CarCard({ car, onSelect }) {
       )}
       <div className="car-card-body">
         <div className="car-card-name">{car.year} {car.make} {car.model}</div>
+        {badges.length > 0 && (
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+            {badges.map(b => <Badge key={b.badge_type} type={b.badge_type} set="individual" size="sm" />)}
+          </div>
+        )}
         <div className="car-card-engine">{car.engine}</div>
         <div className="car-card-specs">
           {[{ v: car.hp, l: 'HP' }, { v: car.sprint, l: '0–100' }, { v: car.kmph, l: 'Top km/h' }].map((s, i) => (

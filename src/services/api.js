@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────
 // RevUp — Supabase API Layer
 // ─────────────────────────────────────────
-import { supabase } from '../supabase'
+import { supabase } from './supabase'
 
 // ── Posts ───────────────────────────────────
 export async function fetchPosts() {
@@ -444,4 +444,246 @@ export async function markConversationAsRead(conversationId) {
     .eq('id', conversationId)
 
   if (error) throw error
+}
+
+// ── Competition — Weeks ─────────────────────────────────
+export async function fetchCurrentWeek() {
+  const now = new Date()
+  const year = now.getFullYear()
+  // ISO week number
+  const jan4 = new Date(year, 0, 4)
+  const weekNumber = Math.ceil(((now - jan4) / 86400000 + jan4.getDay() + 1) / 7)
+
+  const { data } = await supabase
+    .from('competition_weeks')
+    .select('*')
+    .eq('week_number', weekNumber)
+    .eq('year', year)
+    .maybeSingle()
+  return data
+}
+
+export async function fetchWeekPhase() {
+  const week = await fetchCurrentWeek()
+  return week?.phase || 'nomination'
+}
+
+// ── Competition — Boosts ────────────────────────────────
+export async function fetchBoostCount(carId, weekNumber, year) {
+  const { count } = await supabase
+    .from('boosts')
+    .select('id', { count: 'exact', head: true })
+    .eq('car_id', carId)
+    .eq('week_number', weekNumber)
+    .eq('year', year)
+  return count || 0
+}
+
+export async function fetchUserBoostThisWeek(userId, weekNumber, year) {
+  const { data } = await supabase
+    .from('boosts')
+    .select('id, car_id')
+    .eq('user_id', userId)
+    .eq('week_number', weekNumber)
+    .eq('year', year)
+    .maybeSingle()
+  return data  // null if user hasn't boosted yet this week
+}
+
+export async function boostCar(carId, userId, weekNumber, year) {
+  const { error } = await supabase
+    .from('boosts')
+    .insert({ car_id: carId, user_id: userId, week_number: weekNumber, year })
+  if (error) throw error
+
+  // Trigger notification for car owner
+  const { data: car } = await supabase.from('cars').select('user_id').eq('id', carId).single()
+  if (car && car.user_id !== userId) {
+    await createNotification({
+      user_id: car.user_id,
+      actor_id: userId,
+      type: 'boost',
+      entity_id: carId
+    })
+  }
+}
+
+export async function removeboost(userId, weekNumber, year) {
+  const { error } = await supabase
+    .from('boosts')
+    .delete()
+    .eq('user_id', userId)
+    .eq('week_number', weekNumber)
+    .eq('year', year)
+  if (error) throw error
+}
+
+export async function fetchTopBoostedCars(weekNumber, year, limit = 8) {
+  // Get car_ids with most boosts this week
+  const { data } = await supabase
+    .from('boosts')
+    .select('car_id')
+    .eq('week_number', weekNumber)
+    .eq('year', year)
+
+  if (!data || data.length === 0) return []
+
+  // Count boosts per car
+  const counts = {}
+  data.forEach(b => { counts[b.car_id] = (counts[b.car_id] || 0) + 1 })
+  const sorted = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([car_id]) => car_id)
+
+  const { data: cars } = await supabase
+    .from('cars')
+    .select('*, profiles(username, full_name, location)')
+    .in('id', sorted)
+  return cars || []
+}
+
+// ── Competition — Matchups & Voting ────────────────────
+export async function fetchMatchups(weekId, round) {
+  const { data } = await supabase
+    .from('matchups')
+    .select('*, car_a:cars!car_a_id(*), car_b:cars!car_b_id(*)')
+    .eq('week_id', weekId)
+    .eq('round', round)
+  return data || []
+}
+
+export async function fetchUserVote(matchupId, userId) {
+  const { data } = await supabase
+    .from('matchup_votes')
+    .select('voted_car_id')
+    .eq('matchup_id', matchupId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  return data?.voted_car_id || null
+}
+
+export async function voteOnMatchup(matchupId, userId, votedCarId, isCarA) {
+  // Insert user vote
+  const { error: voteError } = await supabase
+    .from('matchup_votes')
+    .insert({ matchup_id: matchupId, user_id: userId, voted_car_id: votedCarId })
+  if (voteError) throw voteError
+
+  // Increment vote count on the matchup row
+  const col = isCarA ? 'votes_a' : 'votes_b'
+  await supabase.rpc('increment_vote', { matchup_id: matchupId, column_name: col })
+
+  // Trigger notification for the car owner
+  const { data: car } = await supabase.from('cars').select('user_id').eq('id', votedCarId).single()
+  if (car && car.user_id !== userId) {
+    await createNotification({
+      user_id: car.user_id,
+      actor_id: userId,
+      type: 'vote',
+      entity_id: matchupId
+    })
+  }
+}
+
+// ── Competition — Winners & Badges ─────────────────────
+export async function fetchRecentWinners(limit = 5) {
+  const { data } = await supabase
+    .from('competition_winners')
+    .select('*, cars(*), profiles(username, full_name)')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  return data || []
+}
+
+export async function fetchHallOfFame() {
+  const { data } = await supabase
+    .from('competition_winners')
+    .select('*, cars(*), profiles(username, full_name, location)')
+    .in('win_type', ['yearly'])
+    .order('year', { ascending: false })
+  return data || []
+}
+
+export async function fetchCarBadges(carId) {
+  const { data } = await supabase
+    .from('badges')
+    .select('badge_type, awarded_at')
+    .eq('car_id', carId)
+    .order('awarded_at', { ascending: false })
+  return data || []
+}
+
+export async function fetchUserBadges(userId) {
+  const { data } = await supabase
+    .from('badges')
+    .select('badge_type, car_id, awarded_at, cars(make, model)')
+    .eq('user_id', userId)
+    .order('awarded_at', { ascending: false })
+  return data || []
+}
+
+// ── City Competition ────────────────────────────────────
+export async function fetchCityLeaderboard(weekNumber, year) {
+  const { data } = await supabase
+    .from('city_points')
+    .select('city, points')
+    .eq('week_number', weekNumber)
+    .eq('year', year)
+    .order('points', { ascending: false })
+  return data || []
+}
+
+export async function initializeCompetitionWeek(weekNumber, year) {
+  const startDate = new Date()
+  const endDate = new Date()
+  endDate.setDate(startDate.getDate() + 7)
+
+  const { data, error } = await supabase.from('competition_weeks').insert({
+    week_number: weekNumber,
+    year,
+    phase: 'nomination',
+    start_date: startDate.toISOString(),
+    end_date: endDate.toISOString()
+  }).select().single()
+
+  if (error) throw error
+  return data
+}
+
+// ── Car Gallery & Mods ──────────────────────────────────
+export async function fetchCarImages(carId) {
+  const { data } = await supabase.from('car_images').select('*').eq('car_id', carId).order('created_at', { ascending: true })
+  return data || []
+}
+
+export async function addCarImage(carId, imageUrl) {
+  const { error } = await supabase.from('car_images').insert({ car_id: carId, image_url: imageUrl })
+  if (error) throw error
+}
+
+export async function fetchCarMods(carId) {
+  const { data } = await supabase.from('car_mods').select('*').eq('car_id', carId).order('created_at', { ascending: true })
+  return data || []
+}
+
+export async function addCarMod(carId, category, description) {
+  const { error } = await supabase.from('car_mods').insert({ car_id: carId, category, description })
+  if (error) throw error
+}
+
+export async function deleteCarMod(modId) {
+  const { error } = await supabase.from('car_mods').delete().eq('id', modId)
+  if (error) throw error
+}
+
+// ── Enhanced Events ─────────────────────────────────────
+export async function fetchEventAttendeesWithProfiles(eventId) {
+  const { data, error } = await supabase
+    .from('event_attendees')
+    .select('user_id, profiles(username, full_name)')
+    .eq('event_id', eventId)
+  
+  if (error) throw error
+  return data || []
 }

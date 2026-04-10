@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { fetchCars, fetchProfile } from '../data/api'
-import CarCard from '../components/CarCard'
-import CarDetail from '../components/CarDetail'
-import AddCarForm from '../components/AddCarForm'
+import { fetchCars, fetchProfile } from '../services/api'
+import CarCard from '../components/cars/CarCard'
+import CarDetail from '../components/cars/CarDetail'
+import AddCarForm from '../components/cars/AddCarForm'
+import BoostButton from '../components/cars/BoostButton'
 
 export default function GaragePage() {
   const { session } = useAuth()
@@ -102,7 +103,12 @@ export default function GaragePage() {
         
         {activeTab === 'garage' && (
           <div className="cars-grid">
-            {cars.map(car => <CarCard key={car.id} car={car} onSelect={setSelected} />)}
+            {cars.map(car => (
+              <div key={car.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <CarCard car={car} onSelect={setSelected} />
+                <BoostButton car={car} />
+              </div>
+            ))}
             <div className="add-car-tile" onClick={() => setShowForm(true)}>
               <div className="add-car-plus">+</div>
               <div className="add-car-label">Add Car</div>

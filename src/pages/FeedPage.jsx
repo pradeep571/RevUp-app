@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { fetchPosts, fetchAllProfiles, fetchFollowing } from '../data/api'
-import { CHIPS } from '../data/constants'
-import PostCard from '../components/PostCard'
-import CreatePostModal from '../components/CreatePostModal'
-import { supabase } from '../supabase'
+import { fetchPosts, fetchAllProfiles, fetchFollowing } from '../services/api'
+import { CHIPS } from '../services/constants'
+import PostCard from '../components/social/PostCard'
+import CreatePostModal from '../components/social/CreatePostModal'
+import { supabase } from '../services/supabase'
 
 export default function FeedPage() {
   const { session } = useAuth()

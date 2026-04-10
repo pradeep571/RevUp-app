@@ -12,13 +12,15 @@ import {
   checkFollowing,
   fetchFollowersProfiles,
   fetchFollowingProfiles,
-  getOrCreateConversation
-} from '../data/api'
+  getOrCreateConversation,
+  fetchUserBadges
+} from '../services/api'
 import { uploadImage } from '../lib/uploadImage'
-import CarCard from '../components/CarCard'
-import PostCard from '../components/PostCard'
-import CarDetail from '../components/CarDetail'
-import UserListModal from '../components/UserListModal'
+import CarCard from '../components/cars/CarCard'
+import PostCard from '../components/social/PostCard'
+import CarDetail from '../components/cars/CarDetail'
+import UserListModal from '../components/social/UserListModal'
+import Badge from '../components/common/Badge'
 
 export default function ProfilePage() {
   const { session, logout } = useAuth()
@@ -31,6 +33,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null)
   const [cars, setCars] = useState([])
   const [posts, setPosts] = useState([])
+  const [userBadges, setUserBadges] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('garage')
   const [selectedCar, setSelectedCar] = useState(null)
@@ -55,17 +58,19 @@ export default function ProfilePage() {
       if (!userId) return
       setLoading(true)
       try {
-        const [profData, carsData, postsData, followData] = await Promise.all([
+        const [profData, carsData, postsData, followData, badgesData] = await Promise.all([
           fetchProfile(userId),
           fetchCars(userId),
           fetchPostsByUser(userId),
-          fetchFollowCounts(userId)
+          fetchFollowCounts(userId),
+          fetchUserBadges(userId)
         ])
         setProfile(profData || { username: 'Racer', full_name: 'Unknown User', location: 'Unknown' })
         setCars(carsData || [])
         setPosts(postsData || [])
         setFollowerCount(followData.followers)
         setFollowingCount(followData.following)
+        setUserBadges(badgesData || [])
 
         if (!isOwner && session?.user?.id) {
           const followingStatus = await checkFollowing(session.user.id, userId)
@@ -251,6 +256,17 @@ export default function ProfilePage() {
               <span className="stat-lbl-premium">Following</span>
             </div>
           </div>
+
+          {userBadges.length > 0 && (
+            <div style={{ padding: '16px', borderTop: '1px solid var(--border)', marginTop: 12 }}>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: 'var(--muted)', marginBottom: 8, letterSpacing: '1px' }}>ACHIEVEMENTS</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {userBadges.map((b, i) => (
+                  <Badge key={i} type={b.badge_type} set="individual" />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Modern Tabs */}

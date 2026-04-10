@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { createPost } from '../data/api'
-import ImageUpload from './ImageUpload'
+import { useAuth } from '../../context/AuthContext'
+import { createPost } from '../../services/api'
+import ImageUpload from '../cars/ImageUpload'
 
 export default function CreatePostModal({ onClose, onPosted }) {
   const { session } = useAuth()

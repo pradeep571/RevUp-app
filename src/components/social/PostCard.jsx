@@ -1,16 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { supabase } from '../supabase'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import { supabase } from '../../services/supabase'
 import { 
   fetchLikes, addLike, removeLike, 
   fetchCommentCount, fetchComments, 
   addComment, deleteComment, 
   deletePost, fetchProfile,
   followUser, unfollowUser, checkFollowing
-} from '../data/api'
+} from '../../services/api'
 
 export default function PostCard({ post, onDelete }) {
   const { session } = useAuth()
+  const navigate = useNavigate()
 
   // ── Like state ──
   const [liked, setLiked] = useState(false)
@@ -234,7 +236,7 @@ export default function PostCard({ post, onDelete }) {
   async function handleDelete() {
     if (!window.confirm('Delete this post?')) return
     await deletePost(post.id)
-    onDelete(post.id)
+    if (onDelete) onDelete(post.id)
   }
 
   // ── Time helper ──
@@ -257,7 +259,7 @@ export default function PostCard({ post, onDelete }) {
           {authorName[0]?.toUpperCase() || 'U'}
         </div>
         <div style={{ flex: 1 }}>
-          <div className="post-name" style={{ cursor: 'pointer' }} onClick={() => window.location.href = `/profile/${post.user_id}`}>{authorName}</div>
+          <div className="post-name" style={{ cursor: 'pointer' }} onClick={() => navigate(`/profile/${post.user_id}`)}>{authorName}</div>
           <div className="post-handle">
             {post.car_tag ? `🚗 ${post.car_tag}` : ''} · {timeAgo(post.created_at)}
           </div>
